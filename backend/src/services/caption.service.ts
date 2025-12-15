@@ -83,7 +83,15 @@ export class CaptionService {
       ],
     };
 
+    const hashtagGuidelines: Record<string, { min: number; max: number }> = {
+      INSTAGRAM: { min: 20, max: 30 },
+      TIKTOK: { min: 3, max: 5 },
+      FACEBOOK: { min: 1, max: 3 },
+      YOUTUBE: { min: 5, max: 10 },
+    };
+
     const strategyList = platformStrategies[params.platform] || [];
+    const hashtagRange = hashtagGuidelines[params.platform] || { min: 5, max: params.hashtagCount };
 
     return `Create a high-performance ${params.platform} caption for a ${params.contentType}.
 
@@ -104,12 +112,13 @@ ${params.trendingHashtags.slice(0, 20).join(', ')}
 Requirements:
 1. Create a captivating, algorithm-friendly caption optimized for ${params.platform}
 2. Match the ${params.brandVoice} tone while keeping it scannable on mobile
-3. Include ${params.hashtagCount} highly relevant hashtags; prefer the most trending/targeted
+3. Include ${params.hashtagCount} highly relevant hashtags; prefer the most trending/targeted and stay within ${hashtagRange.min}-${hashtagRange.max} tags
 4. Use trending hashtags where appropriate; avoid spammy or banned tags
 5. ${params.emojiPreference ? 'Include relevant emojis' : 'Keep emoji use minimal or skip'}
 6. Add a clear call-to-action aligned to the platform (save/share/comment/subscribe/duet)
 7. Make it engaging for ${params.targetAudience} and optimized for watch/scroll retention
 8. Follow the platform-specific strategies above
+9. Ensure the hook, CTA, keywords, and hashtag range are all satisfied (strictly follow the tips)
 
 Format your response as:
 CAPTION: [your caption here]
