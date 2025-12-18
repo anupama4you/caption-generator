@@ -85,9 +85,32 @@ export class TrendingHashtagService {
       { hashtag: '#community', platform: 'FACEBOOK', category: 'general', score: 78 },
 
       // YouTube
-      { hashtag: '#youtube', platform: 'YOUTUBE', category: 'general', score: 92 },
-      { hashtag: '#youtuber', platform: 'YOUTUBE', category: 'general', score: 88 },
-      { hashtag: '#subscribe', platform: 'YOUTUBE', category: 'general', score: 85 },
+      { hashtag: '#shorts', platform: 'YOUTUBE_SHORTS', category: 'general', score: 90 },
+      { hashtag: '#youtubeshorts', platform: 'YOUTUBE_SHORTS', category: 'general', score: 88 },
+      { hashtag: '#ytshorts', platform: 'YOUTUBE_SHORTS', category: 'general', score: 85 },
+      { hashtag: '#youtube', platform: 'YOUTUBE_LONG', category: 'general', score: 92 },
+      { hashtag: '#youtuber', platform: 'YOUTUBE_LONG', category: 'general', score: 88 },
+      { hashtag: '#subscribe', platform: 'YOUTUBE_LONG', category: 'general', score: 85 },
+
+      // LinkedIn
+      { hashtag: '#careerdevelopment', platform: 'LINKEDIN', category: 'general', score: 82 },
+      { hashtag: '#leadership', platform: 'LINKEDIN', category: 'general', score: 80 },
+      { hashtag: '#b2bmarketing', platform: 'LINKEDIN', category: 'marketing', score: 78 },
+
+      // X (Twitter)
+      { hashtag: '#buildinpublic', platform: 'X', category: 'general', score: 82 },
+      { hashtag: '#newsthread', platform: 'X', category: 'general', score: 79 },
+      { hashtag: '#marketingtwitter', platform: 'X', category: 'marketing', score: 77 },
+
+      // Pinterest
+      { hashtag: '#pinterestideas', platform: 'PINTEREST', category: 'general', score: 80 },
+      { hashtag: '#diyprojects', platform: 'PINTEREST', category: 'diy', score: 82 },
+      { hashtag: '#homedecor', platform: 'PINTEREST', category: 'home', score: 79 },
+
+      // Snapchat
+      { hashtag: '#snapchat', platform: 'SNAPCHAT', category: 'general', score: 78 },
+      { hashtag: '#snaplife', platform: 'SNAPCHAT', category: 'general', score: 76 },
+      { hashtag: '#snapfam', platform: 'SNAPCHAT', category: 'community', score: 75 },
     ];
 
     for (const trend of curatedTrends) {

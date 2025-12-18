@@ -15,166 +15,218 @@ export class CaptionController {
         return res.status(401).json({ error: 'Unauthorized' });
       }
 
-      const userId = req.user.id;
-      const { contentType, contentDescription } = req.body;
+      const {
+        platforms,
+        contentFormat,
+        contentDescription,
+        ...otherParams
+      }: CaptionGenerationParams = req.body;
 
-      if (!contentType || !contentDescription) {
-        return res.status(400).json({ error: 'Missing required fields' });
+      if (!platforms || platforms.length === 0) {
+        return res.status(400).json({
+          success: false,
+          message: 'At least one platform is required',
+        });
       }
 
-      // Determine platforms (use user preference if middleware set it)
-      const targetPlatforms =
-        req.targetPlatforms && req.targetPlatforms.length > 0
-          ? req.targetPlatforms
-          : (['INSTAGRAM', 'TIKTOK', 'FACEBOOK', 'YOUTUBE'] as CaptionGenerationParams['platform'][]);
+      if (!contentFormat) {
+        return res.status(400).json({
+          success: false,
+          message: 'Content format is required',
+        });
+      }
 
-      // Get user profile for context (prefer middleware-fetched profile)
-      const userProfile =
-        req.userProfile ??
-        (await prisma.userProfile.findUnique({
-          where: { userId },
-        }));
+      if (!contentDescription || contentDescription.trim() === '') {
+        return res.status(400).json({
+          success: false,
+          message: 'Content description is required',
+        });
+      }
 
-      const generatedCaptions = [];
+      // Get user profile for personalization
+      const userProfile = req.userProfile;
 
-      for (const platform of targetPlatforms) {
-        // Generate caption using OpenAI
-        const result = await captionService.generateCaption({
-          platform,
-          contentType,
+      // Build complete params
+      const params: CaptionGenerationParams = {
+        platforms,
+        contentFormat,
+        contentDescription,
+        niche: otherParams.niche || userProfile?.niche || undefined,
+        brandVoice: otherParams.brandVoice || userProfile?.brandVoice || undefined,
+        targetAudience: otherParams.targetAudience || userProfile?.targetAudience || undefined,
+        emojiPreference: otherParams.emojiPreference ?? userProfile?.emojiPreference ?? true,
+        hashtagCount: otherParams.hashtagCount || userProfile?.hashtagCount || 10,
+        ...otherParams,
+      };
+
+      // Generate captions for all platforms
+      const platformResults = await captionService.generateCaptionsForAllPlatforms(params);
+
+      // Create caption attempt
+      const attempt = await prisma.captionAttempt.create({
+        data: {
+          userId: req.user.id,
+          contentFormat,
           contentDescription,
-          niche: userProfile?.niche || undefined,
-          brandVoice: userProfile?.brandVoice || undefined,
-          targetAudience: userProfile?.targetAudience || undefined,
-          emojiPreference: userProfile?.emojiPreference,
-          hashtagCount: userProfile?.hashtagCount || 10,
-        });
+          niche: params.niche || null,
+          brandVoice: params.brandVoice || null,
+          targetAudience: params.targetAudience || null,
+          emojiPreference: params.emojiPreference ?? true,
+          hashtagCount: params.hashtagCount ?? 10,
+        },
+      });
 
-        // Save caption to database
-        const caption = await prisma.caption.create({
-          data: {
-            userId,
-            platform,
-            contentType,
-            contentDescription,
-            generatedCaption: result.caption,
-            hashtags: result.hashtags,
-          },
-        });
+      // Save all captions with their variants
+      for (const platformResult of platformResults) {
+        for (let i = 0; i < platformResult.variants.length; i++) {
+          const variant = platformResult.variants[i];
 
-        // Generate analytics
-        const analytics = await analyticsService.predictCaptionAnalytics(
-          result.caption,
-          result.hashtags,
-          platform,
-          userProfile
-        );
+          const caption = await prisma.caption.create({
+            data: {
+              attemptId: attempt.id,
+              platform: platformResult.platform,
+              variantNumber: i + 1,
+              generatedCaption: variant.caption,
+              hashtags: variant.hashtags || [],
+              hashtagReason: variant.hashtagReason || null,
+              storySlides: variant.storySlides || [],
+            },
+          });
 
-        // Save analytics
-        await prisma.captionAnalytics.create({
-          data: {
-            captionId: caption.id,
-            engagementScore: analytics.engagementScore,
-            reachEstimate: analytics.reachEstimate,
-            viralityScore: analytics.viralityScore,
-            hashtagScore: analytics.hashtagScore,
-            lengthScore: analytics.lengthScore,
-            emojiScore: analytics.emojiScore,
-            timingScore: analytics.timingScore,
-            keywordScore: analytics.keywordScore,
-            bestPostingTime: analytics.bestPostingTimes,
-            improvementTips: analytics.improvementTips,
-          },
-        });
+          // Generate analytics for each variant
+          const analytics = await analyticsService.predictPerformance(
+            caption.generatedCaption,
+            caption.hashtags,
+            platformResult.platform,
+            userProfile
+          );
 
-        // Return complete result
-        const fullCaption = await prisma.caption.findUnique({
-          where: { id: caption.id },
-          include: {
-            analytics: true,
-          },
-        });
-
-        if (fullCaption) {
-          generatedCaptions.push(fullCaption);
+          await prisma.captionAnalytics.create({
+            data: {
+              captionId: caption.id,
+              ...analytics,
+            },
+          });
         }
       }
 
-      // Increment usage for all generated captions
-      await incrementUsage(userId);
+      // Increment usage count
+      await incrementUsage(req.user.id);
 
-      return res.json({
-        success: true,
-        data: generatedCaptions,
+      // Fetch complete attempt with all captions
+      const fullAttempt = await prisma.captionAttempt.findUnique({
+        where: { id: attempt.id },
+        include: {
+          captions: {
+            include: {
+              analytics: true,
+            },
+            orderBy: [{ platform: 'asc' }, { variantNumber: 'asc' }],
+          },
+        },
       });
-    } catch (error) {
+
+      return res.status(201).json({
+        success: true,
+        message: 'Captions generated successfully',
+        data: fullAttempt,
+      });
+    } catch (error: any) {
       console.error('Caption generation error:', error);
       return res.status(500).json({
-        error: 'Failed to generate caption',
-        message: error instanceof Error ? error.message : 'Unknown error',
+        success: false,
+        message: 'Failed to generate caption',
+        error: error.message,
       });
     }
   }
 
-  async getCaptions(req: AuthRequest, res: Response): Promise<Response | void> {
+  async getAttempts(req: AuthRequest, res: Response): Promise<Response | void> {
     try {
       if (!req.user) {
         return res.status(401).json({ error: 'Unauthorized' });
       }
 
       const page = parseInt(req.query.page as string) || 1;
-      const limit = parseInt(req.query.limit as string) || 20;
+      const limit = parseInt(req.query.limit as string) || 10;
       const skip = (page - 1) * limit;
 
-      const [captions, total] = await Promise.all([
-        prisma.caption.findMany({
+      const [attempts, total] = await Promise.all([
+        prisma.captionAttempt.findMany({
           where: { userId: req.user.id },
-          include: { analytics: true },
+          include: {
+            _count: {
+              select: { captions: true },
+            },
+          },
           orderBy: { createdAt: 'desc' },
           skip,
           take: limit,
         }),
-        prisma.caption.count({ where: { userId: req.user.id } }),
+        prisma.captionAttempt.count({ where: { userId: req.user.id } }),
       ]);
 
       return res.json({
         success: true,
-        data: captions,
+        data: attempts,
         pagination: {
           page,
           limit,
           total,
-          totalPages: Math.ceil(total / limit),
+          pages: Math.ceil(total / limit),
         },
       });
-    } catch (error) {
-      console.error('Get captions error:', error);
-      return res.status(500).json({ error: 'Failed to get captions' });
+    } catch (error: any) {
+      console.error('Fetch attempts error:', error);
+      return res.status(500).json({
+        success: false,
+        message: 'Failed to fetch attempts',
+        error: error.message,
+      });
     }
   }
 
-  async getCaption(req: AuthRequest, res: Response): Promise<Response | void> {
+  async getAttemptById(req: AuthRequest, res: Response): Promise<Response | void> {
     try {
       if (!req.user) {
         return res.status(401).json({ error: 'Unauthorized' });
       }
 
-      const caption = await prisma.caption.findFirst({
+      const { id } = req.params;
+
+      const attempt = await prisma.captionAttempt.findFirst({
         where: {
-          id: req.params.id,
+          id,
           userId: req.user.id,
         },
-        include: { analytics: true },
+        include: {
+          captions: {
+            include: {
+              analytics: true,
+            },
+            orderBy: [{ platform: 'asc' }, { variantNumber: 'asc' }],
+          },
+        },
       });
 
-      if (!caption) {
-        return res.status(404).json({ error: 'Caption not found' });
+      if (!attempt) {
+        return res.status(404).json({
+          success: false,
+          message: 'Attempt not found',
+        });
       }
 
-      return res.json({ success: true, data: caption });
-    } catch (error) {
-      console.error('Get caption error:', error);
-      return res.status(500).json({ error: 'Failed to get caption' });
+      return res.json({
+        success: true,
+        data: attempt,
+      });
+    } catch (error: any) {
+      console.error('Fetch attempt error:', error);
+      return res.status(500).json({
+        success: false,
+        message: 'Failed to fetch attempt',
+        error: error.message,
+      });
     }
   }
 
@@ -184,54 +236,80 @@ export class CaptionController {
         return res.status(401).json({ error: 'Unauthorized' });
       }
 
-      const caption = await prisma.caption.findFirst({
+      const { id } = req.params;
+
+      const attempt = await prisma.captionAttempt.findFirst({
         where: {
-          id: req.params.id,
+          id,
           userId: req.user.id,
         },
       });
 
-      if (!caption) {
-        return res.status(404).json({ error: 'Caption not found' });
+      if (!attempt) {
+        return res.status(404).json({
+          success: false,
+          message: 'Attempt not found',
+        });
       }
 
-      const updated = await prisma.caption.update({
-        where: { id: caption.id },
-        data: { isFavorite: !caption.isFavorite },
+      const updated = await prisma.captionAttempt.update({
+        where: { id },
+        data: {
+          isFavorite: !attempt.isFavorite,
+        },
       });
 
-      return res.json({ success: true, data: updated });
-    } catch (error) {
+      return res.json({
+        success: true,
+        data: updated,
+      });
+    } catch (error: any) {
       console.error('Toggle favorite error:', error);
-      return res.status(500).json({ error: 'Failed to toggle favorite' });
+      return res.status(500).json({
+        success: false,
+        message: 'Failed to toggle favorite',
+        error: error.message,
+      });
     }
   }
 
-  async deleteCaption(req: AuthRequest, res: Response): Promise<Response | void> {
+  async deleteAttempt(req: AuthRequest, res: Response): Promise<Response | void> {
     try {
       if (!req.user) {
         return res.status(401).json({ error: 'Unauthorized' });
       }
 
-      const caption = await prisma.caption.findFirst({
+      const { id } = req.params;
+
+      const attempt = await prisma.captionAttempt.findFirst({
         where: {
-          id: req.params.id,
+          id,
           userId: req.user.id,
         },
       });
 
-      if (!caption) {
-        return res.status(404).json({ error: 'Caption not found' });
+      if (!attempt) {
+        return res.status(404).json({
+          success: false,
+          message: 'Attempt not found',
+        });
       }
 
-      await prisma.caption.delete({
-        where: { id: caption.id },
+      await prisma.captionAttempt.delete({
+        where: { id },
       });
 
-      return res.json({ success: true, message: 'Caption deleted' });
-    } catch (error) {
-      console.error('Delete caption error:', error);
-      return res.status(500).json({ error: 'Failed to delete caption' });
+      return res.json({
+        success: true,
+        message: 'Attempt deleted successfully',
+      });
+    } catch (error: any) {
+      console.error('Delete attempt error:', error);
+      return res.status(500).json({
+        success: false,
+        message: 'Failed to delete attempt',
+        error: error.message,
+      });
     }
   }
 }

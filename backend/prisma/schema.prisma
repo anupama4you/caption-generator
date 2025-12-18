@@ -15,18 +15,25 @@ enum SubscriptionTier {
 }
 
 enum Platform {
-  FACEBOOK
-  INSTAGRAM
-  TIKTOK
-  YOUTUBE
+  instagram
+  tiktok
+  youtube_shorts
+  youtube_long
+  facebook
+  linkedin
+  x
+  pinterest
+  snapchat
+  all
 }
 
-enum ContentType {
-  PHOTO
-  REEL
-  SHORT
-  VIDEO
-  POST
+enum ContentFormat {
+  short_video
+  long_video
+  image
+  carousel
+  story
+  text_only
 }
 
 model User {
@@ -44,7 +51,7 @@ model User {
 
   // Relations
   profile           UserProfile?
-  captions          Caption[]
+  captionAttempts   CaptionAttempt[]
   usageTracking     UsageTracking[]
 
   @@index([email])
@@ -89,28 +96,57 @@ model UsageTracking {
   @@index([userId, month, year])
 }
 
-model Caption {
+// Represents a single generation attempt
+model CaptionAttempt {
   id                String       @id @default(uuid())
   userId            String
   user              User         @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  // Content Details
-  platform          Platform
-  contentType       ContentType
+  // Input Details
+  contentFormat     ContentFormat
   contentDescription String      @db.Text
 
-  // Generated Caption
-  generatedCaption  String       @db.Text
-  hashtags          String[]     // Array of hashtags
-
-  // Analytics Prediction
-  analytics         CaptionAnalytics?
+  // User preferences at time of generation
+  niche             String?
+  brandVoice        String?
+  targetAudience    String?
+  emojiPreference   Boolean      @default(true)
+  hashtagCount      Int          @default(10)
 
   // Metadata
   isFavorite        Boolean      @default(false)
   createdAt         DateTime     @default(now())
 
+  // Relations
+  captions          Caption[]
+
   @@index([userId, createdAt])
+}
+
+// Individual caption variant for a platform
+model Caption {
+  id                String            @id @default(uuid())
+  attemptId         String
+  attempt           CaptionAttempt    @relation(fields: [attemptId], references: [id], onDelete: Cascade)
+
+  // Platform specific
+  platform          Platform
+  variantNumber     Int               @default(1) // 1, 2, or 3
+
+  // Generated Content
+  generatedCaption  String            @db.Text
+  hashtags          String[]          // Empty for stories and certain platforms
+  hashtagReason     String?           // Why hashtags not recommended (if empty)
+
+  // Story-specific fields
+  storySlides       String[]          // Array of slide texts (if story format)
+
+  // Analytics Prediction
+  analytics         CaptionAnalytics?
+
+  createdAt         DateTime          @default(now())
+
+  @@index([attemptId])
   @@index([platform])
 }
 

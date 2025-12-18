@@ -1,10 +1,8 @@
 import { useState, useEffect, FormEvent } from 'react';
 import { Link } from 'react-router-dom';
 import api from '../services/api';
-import { UserProfile } from '../types';
 
 export default function Profile() {
-  const [profile, setProfile] = useState<UserProfile | null>(null);
   const [niche, setNiche] = useState('');
   const [brandVoice, setBrandVoice] = useState('');
   const [targetAudience, setTargetAudience] = useState('');
@@ -22,7 +20,6 @@ export default function Profile() {
       const response = await api.get('/profile');
       const data = response.data.data;
       if (data) {
-        setProfile(data);
         setNiche(data.niche || '');
         setBrandVoice(data.brandVoice || '');
         setTargetAudience(data.targetAudience || '');

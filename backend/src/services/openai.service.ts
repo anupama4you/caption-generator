@@ -1,5 +1,6 @@
 import OpenAI from 'openai';
 import { config } from '../config/env';
+import { OpenAICaptionResponse, Platform, ContentFormat } from '../types';
 
 export class OpenAIService {
   private client: OpenAI;
@@ -10,29 +11,80 @@ export class OpenAIService {
     });
   }
 
-  async generateCaptionWithAI(prompt: string): Promise<string> {
+  async generateCaptionWithStructuredOutput(
+    systemPrompt: string,
+    developerPrompt: string,
+    userPrompt: string,
+    platform: Platform,
+    _format: ContentFormat
+  ): Promise<OpenAICaptionResponse> {
     try {
       const response = await this.client.chat.completions.create({
-        model: 'gpt-4',
+        model: 'gpt-4o',
         messages: [
           {
             role: 'system',
-            content:
-              'You are an expert social media caption writer who creates engaging, platform-optimized captions that maximize engagement.',
+            content: systemPrompt,
+          },
+          {
+            role: 'developer',
+            content: developerPrompt,
           },
           {
             role: 'user',
-            content: prompt,
+            content: userPrompt,
           },
         ],
         temperature: 0.8,
-        max_tokens: 500,
+        max_tokens: 2000,
+        response_format: { type: 'json_object' },
       });
 
-      return response.choices[0].message.content || '';
+      const content = response.choices[0].message.content || '{"variants":[]}';
+      const parsed = JSON.parse(content);
+
+      // Validate and ensure we have 3 variants
+      if (!parsed.variants || !Array.isArray(parsed.variants)) {
+        throw new Error('Invalid response structure');
+      }
+
+      // Ensure exactly 3 variants
+      while (parsed.variants.length < 3) {
+        parsed.variants.push({
+          caption: parsed.variants[0]?.caption || 'Caption variant',
+          hashtags: parsed.variants[0]?.hashtags || [],
+          hashtag_explanation: parsed.variants[0]?.hashtag_explanation,
+          story_slides: parsed.variants[0]?.story_slides,
+        });
+      }
+
+      if (parsed.variants.length > 3) {
+        parsed.variants = parsed.variants.slice(0, 3);
+      }
+
+      return parsed as OpenAICaptionResponse;
     } catch (error) {
       console.error('OpenAI API error:', error);
-      throw new Error('Failed to generate caption with AI');
+      // Return fallback
+      return {
+        variants: [
+          {
+            caption: `Error generating caption for ${platform}. Please try again.`,
+            hashtags: [],
+            hashtag_explanation: 'Generation failed',
+          },
+          {
+            caption: `Error generating caption for ${platform}. Please try again.`,
+            hashtags: [],
+            hashtag_explanation: 'Generation failed',
+          },
+          {
+            caption: `Error generating caption for ${platform}. Please try again.`,
+            hashtags: [],
+            hashtag_explanation: 'Generation failed',
+          },
+        ],
+      };
     }
   }
 

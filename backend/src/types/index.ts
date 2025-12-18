@@ -9,23 +9,58 @@ export interface AuthRequest extends Request {
   };
   usage?: UsageTracking;
   userProfile?: UserProfile | null;
-  targetPlatforms?: CaptionGenerationParams['platform'][];
+  targetPlatforms?: Platform[];
 }
 
+export type Platform =
+  | 'instagram'
+  | 'tiktok'
+  | 'youtube_shorts'
+  | 'youtube_long'
+  | 'facebook'
+  | 'linkedin'
+  | 'x'
+  | 'pinterest'
+  | 'snapchat'
+  | 'all';
+
+export type ContentFormat =
+  | 'short_video'
+  | 'long_video'
+  | 'image'
+  | 'carousel'
+  | 'story'
+  | 'text_only';
+
 export interface CaptionGenerationParams {
-  platform: 'INSTAGRAM' | 'TIKTOK' | 'FACEBOOK' | 'YOUTUBE';
-  contentType: 'PHOTO' | 'REEL' | 'SHORT' | 'VIDEO' | 'POST';
+  platforms: Platform[];
+  contentFormat: ContentFormat;
   contentDescription: string;
   niche?: string;
   brandVoice?: string;
   targetAudience?: string;
   emojiPreference?: boolean;
   hashtagCount?: number;
+  goal?: string;
+  tone?: string;
+  length?: 'short' | 'medium' | 'long';
+  hashtagLevel?: 'none' | 'low' | 'medium' | 'high';
+  ctaType?: string[];
+  keyPoints?: string[];
+  avoid?: string[];
+  storyEnabled?: boolean;
 }
 
-export interface CaptionResult {
+export interface CaptionVariant {
   caption: string;
   hashtags: string[];
+  hashtagReason?: string; // Why hashtags not recommended
+  storySlides?: string[]; // For story format
+}
+
+export interface PlatformCaptionResult {
+  platform: Platform;
+  variants: CaptionVariant[]; // 3 variants
 }
 
 export interface AnalyticsFactors {
@@ -45,6 +80,16 @@ export interface PredictedMetrics {
   emojiScore: number;
   timingScore: number;
   keywordScore: number;
-  bestPostingTimes: string[];
+  bestPostingTime: string[];
   improvementTips: string[];
+}
+
+// OpenAI Response Structure
+export interface OpenAICaptionResponse {
+  variants: {
+    caption: string;
+    hashtags?: string[];
+    hashtag_explanation?: string;
+    story_slides?: string[];
+  }[];
 }

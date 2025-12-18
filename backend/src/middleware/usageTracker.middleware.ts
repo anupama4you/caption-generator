@@ -1,12 +1,17 @@
 import { Response, NextFunction } from 'express';
-import { AuthRequest, CaptionGenerationParams } from '../types';
+import { AuthRequest, Platform } from '../types';
 import prisma from '../config/database';
 
-const DEFAULT_PLATFORMS: CaptionGenerationParams['platform'][] = [
-  'INSTAGRAM',
-  'TIKTOK',
-  'FACEBOOK',
-  'YOUTUBE',
+const DEFAULT_PLATFORMS: Platform[] = [
+  'instagram',
+  'tiktok',
+  'youtube_shorts',
+  'youtube_long',
+  'facebook',
+  'linkedin',
+  'x',
+  'pinterest',
+  'snapchat',
 ];
 
 export const checkCaptionLimit = async (
@@ -30,7 +35,7 @@ export const checkCaptionLimit = async (
     const targetPlatforms =
       (profile?.preferredPlatforms && profile.preferredPlatforms.length > 0
         ? profile.preferredPlatforms
-        : DEFAULT_PLATFORMS) as CaptionGenerationParams['platform'][];
+        : DEFAULT_PLATFORMS) as Platform[];
     const generationCost = 1;
 
     // Get or create usage tracking record

@@ -1,25 +1,22 @@
-import { Platform, UserProfile } from '@prisma/client';
-import { PredictedMetrics } from '../types';
+import { UserProfile } from '@prisma/client';
+import { PredictedMetrics, Platform } from '../types';
 import { OpenAIService } from './openai.service';
-import { TrendingHashtagService } from './trending.service';
 
 export class AnalyticsService {
   private openAI: OpenAIService;
-  private trendingService: TrendingHashtagService;
 
   constructor() {
     this.openAI = new OpenAIService();
-    this.trendingService = new TrendingHashtagService();
   }
 
-  async predictCaptionAnalytics(
+  async predictPerformance(
     caption: string,
     hashtags: string[],
     platform: Platform,
     userProfile?: UserProfile | null
   ): Promise<PredictedMetrics> {
     // Calculate individual scores
-    const hashtagScore = await this.calculateHashtagScore(hashtags, platform, userProfile?.niche);
+    const hashtagScore = this.calculateHashtagScore(hashtags, platform);
     const lengthScore = this.calculateLengthScore(caption, platform);
     const emojiScore = this.calculateEmojiScore(caption, platform);
     const { score: timingScore, times: bestPostingTimes } = this.calculateTimingScore(
@@ -69,48 +66,49 @@ export class AnalyticsService {
       emojiScore: Math.round(emojiScore * 10) / 10,
       timingScore: Math.round(timingScore * 10) / 10,
       keywordScore: Math.round(keywordScore * 10) / 10,
-      bestPostingTimes,
+      bestPostingTime: bestPostingTimes,
       improvementTips,
     };
   }
 
-  private async calculateHashtagScore(
-    hashtags: string[],
-    platform: Platform,
-    niche?: string | null
-  ): Promise<number> {
-    const trendingHashtags = await this.trendingService.getTrendingForGeneration(
-      platform,
-      niche || undefined
-    );
-
+  private calculateHashtagScore(hashtags: string[], platform: Platform): number {
     let score = 0;
 
     // Optimal hashtag count per platform
     const optimalCounts: Record<Platform, { min: number; max: number }> = {
-      INSTAGRAM: { min: 20, max: 30 },
-      TIKTOK: { min: 3, max: 5 },
-      FACEBOOK: { min: 1, max: 3 },
-      YOUTUBE: { min: 10, max: 15 },
+      instagram: { min: 15, max: 25 },
+      tiktok: { min: 3, max: 5 },
+      youtube_shorts: { min: 5, max: 10 },
+      youtube_long: { min: 8, max: 15 },
+      facebook: { min: 1, max: 3 },
+      linkedin: { min: 3, max: 5 },
+      x: { min: 2, max: 6 },
+      pinterest: { min: 3, max: 8 },
+      snapchat: { min: 1, max: 3 },
+      all: { min: 5, max: 10 },
     };
 
     const optimal = optimalCounts[platform];
 
-    // Count score (30 points)
+    // Count score (40 points)
     if (hashtags.length >= optimal.min && hashtags.length <= optimal.max) {
-      score += 30;
+      score += 40;
+    } else if (hashtags.length === 0) {
+      // Stories or platforms that don't use hashtags
+      score += 40;
     } else {
-      score += 30 * (1 - Math.abs(hashtags.length - optimal.min) / optimal.max);
+      score += 40 * (1 - Math.abs(hashtags.length - optimal.min) / optimal.max);
     }
 
-    // Trending score (40 points)
-    const trendingMatches = hashtags.filter((tag) =>
-      trendingHashtags.some((t) => t.hashtag === tag && t.trendScore > 50)
+    // Quality score (60 points) - basic diversity check
+    const uniqueWords = new Set(
+      hashtags.map((tag) => tag.toLowerCase().replace(/[^a-z0-9]/g, ''))
     );
-    score += (trendingMatches.length / Math.max(hashtags.length, 1)) * 40;
-
-    // Diversity score (30 points) - basic check
-    score += 30;
+    if (uniqueWords.size === hashtags.length) {
+      score += 60;
+    } else {
+      score += (uniqueWords.size / Math.max(hashtags.length, 1)) * 60;
+    }
 
     return Math.min(100, score);
   }
@@ -120,10 +118,16 @@ export class AnalyticsService {
 
     // Optimal caption lengths per platform
     const optimalRanges: Record<Platform, { min: number; max: number }> = {
-      INSTAGRAM: { min: 138, max: 150 },
-      TIKTOK: { min: 100, max: 150 },
-      FACEBOOK: { min: 40, max: 80 },
-      YOUTUBE: { min: 200, max: 300 },
+      instagram: { min: 100, max: 150 },
+      tiktok: { min: 80, max: 130 },
+      youtube_shorts: { min: 80, max: 130 },
+      youtube_long: { min: 200, max: 300 },
+      facebook: { min: 40, max: 80 },
+      linkedin: { min: 60, max: 140 },
+      x: { min: 80, max: 200 },
+      pinterest: { min: 100, max: 160 },
+      snapchat: { min: 40, max: 80 },
+      all: { min: 80, max: 150 },
     };
 
     const range = optimalRanges[platform];
@@ -145,16 +149,24 @@ export class AnalyticsService {
 
     // Optimal emoji count per platform
     const optimalEmojis: Record<Platform, { min: number; max: number }> = {
-      INSTAGRAM: { min: 3, max: 8 },
-      TIKTOK: { min: 2, max: 5 },
-      FACEBOOK: { min: 1, max: 3 },
-      YOUTUBE: { min: 2, max: 5 },
+      instagram: { min: 3, max: 8 },
+      tiktok: { min: 2, max: 5 },
+      youtube_shorts: { min: 2, max: 5 },
+      youtube_long: { min: 1, max: 4 },
+      facebook: { min: 1, max: 3 },
+      linkedin: { min: 0, max: 2 },
+      x: { min: 1, max: 4 },
+      pinterest: { min: 2, max: 5 },
+      snapchat: { min: 1, max: 4 },
+      all: { min: 2, max: 5 },
     };
 
     const optimal = optimalEmojis[platform];
 
     if (emojiCount >= optimal.min && emojiCount <= optimal.max) {
       return 100;
+    } else if (emojiCount === 0 && platform === 'linkedin') {
+      return 100; // LinkedIn is fine with no emojis
     } else if (emojiCount === 0) {
       return 50;
     } else if (emojiCount < optimal.min) {
@@ -170,29 +182,62 @@ export class AnalyticsService {
   ): { score: number; times: string[] } {
     // Best posting times based on platform and niche
     const bestTimes: Record<Platform, Record<string, string[]>> = {
-      INSTAGRAM: {
+      instagram: {
         general: ['9:00 AM', '11:00 AM', '7:00 PM'],
         fitness: ['6:00 AM', '12:00 PM', '6:00 PM'],
         food: ['11:00 AM', '1:00 PM', '7:00 PM'],
         travel: ['9:00 AM', '5:00 PM', '8:00 PM'],
       },
-      TIKTOK: {
+      tiktok: {
         general: ['6:00 AM', '10:00 AM', '7:00 PM', '9:00 PM'],
         fitness: ['6:00 AM', '5:00 PM', '8:00 PM'],
         food: ['12:00 PM', '7:00 PM', '9:00 PM'],
         travel: ['9:00 AM', '6:00 PM', '9:00 PM'],
       },
-      FACEBOOK: {
+      youtube_shorts: {
+        general: ['12:00 PM', '4:00 PM', '8:00 PM'],
+        fitness: ['7:00 AM', '12:00 PM', '8:00 PM'],
+        food: ['11:00 AM', '1:00 PM', '7:00 PM'],
+        travel: ['10:00 AM', '3:00 PM', '8:00 PM'],
+      },
+      youtube_long: {
+        general: ['2:00 PM', '4:00 PM', '9:00 PM'],
+        fitness: ['6:00 AM', '5:00 PM', '8:00 PM'],
+        food: ['12:00 PM', '6:00 PM', '8:00 PM'],
+        travel: ['3:00 PM', '6:00 PM', '9:00 PM'],
+      },
+      facebook: {
         general: ['9:00 AM', '1:00 PM', '3:00 PM'],
         fitness: ['7:00 AM', '12:00 PM', '6:00 PM'],
         food: ['11:00 AM', '1:00 PM', '6:00 PM'],
         travel: ['10:00 AM', '2:00 PM', '7:00 PM'],
       },
-      YOUTUBE: {
-        general: ['2:00 PM', '4:00 PM', '9:00 PM'],
-        fitness: ['6:00 AM', '5:00 PM', '8:00 PM'],
-        food: ['12:00 PM', '6:00 PM', '8:00 PM'],
-        travel: ['3:00 PM', '6:00 PM', '9:00 PM'],
+      linkedin: {
+        general: ['8:00 AM', '10:00 AM', '6:00 PM'],
+        fitness: ['6:00 AM', '12:00 PM', '6:00 PM'],
+        food: ['8:00 AM', '12:00 PM', '5:00 PM'],
+        travel: ['8:00 AM', '12:00 PM', '6:00 PM'],
+      },
+      x: {
+        general: ['8:00 AM', '12:00 PM', '6:00 PM', '9:00 PM'],
+        fitness: ['6:00 AM', '12:00 PM', '8:00 PM'],
+        food: ['11:00 AM', '1:00 PM', '7:00 PM'],
+        travel: ['9:00 AM', '5:00 PM', '9:00 PM'],
+      },
+      pinterest: {
+        general: ['9:00 AM', '2:00 PM', '8:00 PM'],
+        fitness: ['6:00 AM', '12:00 PM', '7:00 PM'],
+        food: ['11:00 AM', '1:00 PM', '8:00 PM'],
+        travel: ['10:00 AM', '3:00 PM', '7:00 PM'],
+      },
+      snapchat: {
+        general: ['10:00 AM', '2:00 PM', '8:00 PM'],
+        fitness: ['6:00 AM', '12:00 PM', '6:00 PM'],
+        food: ['12:00 PM', '6:00 PM', '9:00 PM'],
+        travel: ['11:00 AM', '3:00 PM', '8:00 PM'],
+      },
+      all: {
+        general: ['9:00 AM', '1:00 PM', '7:00 PM'],
       },
     };
 
@@ -202,10 +247,16 @@ export class AnalyticsService {
 
   private calculateReachEstimate(score: number, platform: Platform): string {
     const multipliers: Record<Platform, number> = {
-      INSTAGRAM: 100,
-      TIKTOK: 200,
-      FACEBOOK: 50,
-      YOUTUBE: 300,
+      instagram: 120,
+      tiktok: 200,
+      youtube_shorts: 180,
+      youtube_long: 250,
+      facebook: 80,
+      linkedin: 90,
+      x: 110,
+      pinterest: 100,
+      snapchat: 130,
+      all: 100,
     };
 
     const base = multipliers[platform];
@@ -242,12 +293,18 @@ export class AnalyticsService {
 
     // Add a short video/content suggestion per platform
     const videoSuggestions: Record<Platform, string> = {
-      INSTAGRAM: 'Video idea: 15-30s reel with a 3-step visual, hook in first 2 seconds.',
-      TIKTOK: 'Video idea: 10-20s punchy cut with on-screen text for the hook and CTA.',
-      FACEBOOK: 'Video idea: 20-40s story-style clip with captions on, CTA in the first line.',
-      YOUTUBE: 'Video idea: 45-90s short with a fast intro, chapter cues, and end-screen CTA.',
+      instagram: 'Idea: 15-30s reel/carousel with a 3-step visual, hook in first 2 seconds.',
+      tiktok: 'Idea: 10-20s punchy cut with on-screen text for the hook and CTA.',
+      youtube_shorts: 'Idea: 30-60s short with quick cuts, hook at 0-2s, CTA on-screen.',
+      youtube_long: 'Idea: 5-10 min longform with chapters, value upfront, clear end-screen CTA.',
+      facebook: 'Idea: 20-40s story-style clip with captions on, CTA in the first line.',
+      linkedin: 'Idea: 30-60s value clip or doc-style carousel with 2-3 takeaways and CTA.',
+      x: 'Idea: 10-20s vertical clip or punchy text thread; lead with hook and CTA early.',
+      pinterest: 'Idea: 20-40s how-to clip or 5-card carousel with step-by-step overlays.',
+      snapchat: 'Idea: 5-10s quick snap/short with bold text overlay and a single CTA.',
+      all: 'Idea: Lead with the hook in 2s, CTA early, and keep visuals fast and caption scannable.',
     };
-    tips.push(videoSuggestions[platform]);
+    tips.push(videoSuggestions[platform] || videoSuggestions.all);
 
     // Keep tips concise and focused
     return tips.slice(0, 3);

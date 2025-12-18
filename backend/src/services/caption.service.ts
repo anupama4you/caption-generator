@@ -1,157 +1,230 @@
-import { CaptionGenerationParams, CaptionResult } from '../types';
+import {
+  CaptionGenerationParams,
+  Platform,
+  ContentFormat,
+  PlatformCaptionResult
+} from '../types';
 import { OpenAIService } from './openai.service';
-import { TrendingHashtagService } from './trending.service';
 
 export class CaptionService {
   private openAI: OpenAIService;
-  private trendingService: TrendingHashtagService;
 
   constructor() {
     this.openAI = new OpenAIService();
-    this.trendingService = new TrendingHashtagService();
   }
 
-  async generateCaption(params: CaptionGenerationParams): Promise<CaptionResult> {
-    const {
-      platform,
-      contentType,
-      contentDescription,
-      niche,
-      brandVoice,
-      targetAudience,
-      emojiPreference,
-      hashtagCount,
-    } = params;
+  async generateCaptionsForAllPlatforms(
+    params: CaptionGenerationParams
+  ): Promise<PlatformCaptionResult[]> {
+    const results: PlatformCaptionResult[] = [];
 
-    // Get trending hashtags for context
-    const trendingHashtags = await this.trendingService.getTrendingForGeneration(
+    // Determine which platforms to generate for
+    const platforms = this.resolvePlatforms(params.platforms);
+
+    // Generate captions for each platform
+    for (const platform of platforms) {
+      const result = await this.generateForPlatform(platform, params);
+      results.push(result);
+    }
+
+    return results;
+  }
+
+  private resolvePlatforms(requested: Platform[]): Platform[] {
+    if (requested.includes('all')) {
+      return [
+        'instagram',
+        'tiktok',
+        'youtube_shorts',
+        'youtube_long',
+        'facebook',
+        'linkedin',
+        'x',
+        'pinterest',
+        'snapchat',
+      ];
+    }
+    return requested.filter((p) => p !== 'all');
+  }
+
+  private async generateForPlatform(
+    platform: Platform,
+    params: CaptionGenerationParams
+  ): Promise<PlatformCaptionResult> {
+    // Build the prompt
+    const prompt = this.buildUserPrompt(platform, params);
+    const systemPrompt = this.getSystemPrompt();
+    const developerPrompt = this.getDeveloperPrompt(platform, params.contentFormat);
+
+    // Generate with OpenAI
+    const response = await this.openAI.generateCaptionWithStructuredOutput(
+      systemPrompt,
+      developerPrompt,
+      prompt,
       platform,
-      niche,
-      30
+      params.contentFormat
     );
 
-    // Build context-aware prompt
-    const prompt = this.buildPrompt({
-      platform,
-      contentType,
-      contentDescription,
-      niche: niche || 'general',
-      brandVoice: brandVoice || 'professional',
-      targetAudience: targetAudience || 'general audience',
-      emojiPreference: emojiPreference !== false,
-      hashtagCount: hashtagCount || 10,
-      trendingHashtags: trendingHashtags.map((h) => h.hashtag),
-    });
-
-    // Generate caption
-    const generatedText = await this.openAI.generateCaptionWithAI(prompt);
-
-    // Parse caption and hashtags
-    const { caption, hashtags } = this.parseGeneratedContent(generatedText);
-
     return {
-      caption,
-      hashtags,
+      platform,
+      variants: response.variants.map((v) => ({
+        caption: v.caption,
+        hashtags: v.hashtags || [],
+        hashtagReason: v.hashtag_explanation,
+        storySlides: v.story_slides,
+      })),
     };
   }
 
-  private buildPrompt(params: any): string {
-    const platformStrategies: Record<string, string[]> = {
-      INSTAGRAM: [
-        'Open with a hook in the first 125 characters',
-        'Keep it conversational and personable',
-        'Use a clear CTA (save/share/comment)',
-        'Mix branded and trending hashtags; avoid hashtag stuffing in the first line',
-      ],
-      TIKTOK: [
-        'Be concise and playful; lean into trending slang',
-        'Mention the hook or payoff early',
-        'Add 3-5 highly relevant hashtags, mix broad + niche',
-        'Encourage engagement (duet/stitch/comment/like)',
-      ],
-      FACEBOOK: [
-        'Keep it short and value-focused',
-        'Ask a direct question to spark comments',
-        'Use 1-3 precise hashtags only',
-        'Make the CTA explicit (learn more/join/comment)',
-      ],
-      YOUTUBE: [
-        'Write like a strong video title + short description',
-        'Front-load keywords for SEO',
-        'Include 1-2 punchy CTA lines (watch/subscribe/comment)',
-        'Add 5-10 relevant hashtags; avoid keyword stuffing',
-      ],
-    };
+  private getSystemPrompt(): string {
+    return `You are a professional social media caption writer and strategist.
 
-    const hashtagGuidelines: Record<string, { min: number; max: number }> = {
-      INSTAGRAM: { min: 20, max: 30 },
-      TIKTOK: { min: 3, max: 5 },
-      FACEBOOK: { min: 1, max: 3 },
-      YOUTUBE: { min: 5, max: 10 },
-    };
+You specialise in:
+- Platform-specific caption writing
+- Short-form video hooks
+- Story overlay text
+- Engagement-focused CTAs
+- Clear, natural, human language
 
-    const strategyList = platformStrategies[params.platform] || [];
-    const hashtagRange = hashtagGuidelines[params.platform] || { min: 5, max: params.hashtagCount };
+You always adapt:
+- Length
+- Tone
+- Emoji usage
+- Hashtag usage
 
-    return `Create a high-performance ${params.platform} caption for a ${params.contentType}.
+to the selected platform and format.
 
-Content Description: ${params.contentDescription}
-
-Context:
-- Niche: ${params.niche}
-- Brand Voice: ${params.brandVoice}
-- Target Audience: ${params.targetAudience}
-- Use Emojis: ${params.emojiPreference ? 'Yes' : 'No'}
-- Number of Hashtags: ${params.hashtagCount}
-- Platform-Specific Strategies:
-${strategyList.map((s) => `- ${s}`).join('\n')}
-
-Trending Hashtags to Consider:
-${params.trendingHashtags.slice(0, 20).join(', ')}
-
-Requirements:
-1. Create a captivating, algorithm-friendly caption optimized for ${params.platform}
-2. Match the ${params.brandVoice} tone while keeping it scannable on mobile
-3. Include ${params.hashtagCount} highly relevant hashtags; prefer the most trending/targeted and stay within ${hashtagRange.min}-${hashtagRange.max} tags
-4. Use trending hashtags where appropriate; avoid spammy or banned tags
-5. ${params.emojiPreference ? 'Include relevant emojis' : 'Keep emoji use minimal or skip'}
-6. Add a clear call-to-action aligned to the platform (save/share/comment/subscribe/duet)
-7. Make it engaging for ${params.targetAudience} and optimized for watch/scroll retention
-8. Follow the platform-specific strategies above
-9. Ensure the hook, CTA, keywords, and hashtag range are all satisfied (strictly follow the tips)
-
-Format your response as:
-CAPTION: [your caption here]
-HASHTAGS: #hashtag1 #hashtag2 #hashtag3 ...`;
+You never explain your reasoning.
+You only return valid JSON that follows the provided schema.
+You do not include markdown or extra text.`;
   }
 
-  private parseGeneratedContent(content: string): { caption: string; hashtags: string[] } {
-    const lines = content.split('\n');
-    let caption = '';
-    let hashtags: string[] = [];
+  private getDeveloperPrompt(platform: Platform, format: ContentFormat): string {
+    const isStory = format === 'story';
+    const needsHashtags = this.platformNeedsHashtags(platform, format);
 
-    for (const line of lines) {
-      if (line.startsWith('CAPTION:')) {
-        caption = line.replace('CAPTION:', '').trim();
-      } else if (line.startsWith('HASHTAGS:')) {
-        const hashtagLine = line.replace('HASHTAGS:', '').trim();
-        hashtags = hashtagLine.split(' ').filter((h) => h.startsWith('#'));
-      }
+    return `Generate 3 caption variants strictly following the JSON schema below.
+
+Rules:
+- Do NOT add extra keys.
+- Do NOT remove required keys.
+- All strings must be plain text.
+- Hashtags must not include punctuation.
+- If hashtags are not recommended for the platform, return an empty array and explain why in \`hashtag_explanation\`.
+- Platform tone rules:
+  - TikTok / Instagram Reels: casual, hook-driven
+  - YouTube Shorts: concise, curiosity-based
+  - YouTube Long: informative, keyword-rich
+  - Instagram Feed: expressive, balanced
+  - Facebook: conversational, community-focused
+  - LinkedIn: professional, reflective, no emojis unless requested
+  - X (Twitter): short, sharp, conversational
+  - Pinterest: descriptive, keyword-rich, actionable
+  - Snapchat: ultra-casual, immediate
+
+Story rules:
+- ${isStory ? 'Story overlay text: max 8 words per slide' : 'Not a story format'}
+- ${isStory ? 'Use 3–5 slides if story is enabled' : ''}
+- ${isStory ? 'Suggest interactive stickers when possible' : ''}
+
+Hashtag rules for ${platform}:
+- ${needsHashtags ? this.getHashtagGuideline(platform) : 'Do NOT include hashtags for this platform/format'}
+
+Return ONLY valid JSON matching this schema:
+{
+  "variants": [
+    {
+      "caption": "string",
+      "hashtags": ["string"] ${!needsHashtags ? '// empty array if not recommended' : ''},
+      "hashtag_explanation": "string" ${!needsHashtags ? '// required if hashtags empty' : '// optional'},
+      "story_slides": ["string"] ${isStory ? '// required for stories, 3-5 slides' : '// omit for non-story'}
+    }
+  ]
+}`;
+  }
+
+  private platformNeedsHashtags(platform: Platform, format: ContentFormat): boolean {
+    // Stories don't need hashtags
+    if (format === 'story') return false;
+
+    // Platforms that don't typically use hashtags heavily
+    if (platform === 'linkedin' || platform === 'facebook') return true; // but minimal
+    if (platform === 'snapchat') return false;
+
+    return true;
+  }
+
+  private getHashtagGuideline(platform: Platform): string {
+    const guidelines: Record<string, string> = {
+      instagram: 'Use 15-25 hashtags mixing trending, niche, and branded tags',
+      tiktok: 'Use 3-5 highly relevant hashtags',
+      youtube_shorts: 'Use 5-10 targeted hashtags',
+      youtube_long: 'Use 8-15 SEO-friendly hashtags',
+      facebook: 'Use 1-3 hashtags maximum',
+      linkedin: 'Use 3-5 professional, niche hashtags',
+      x: 'Use 2-6 sharp, trending hashtags',
+      pinterest: 'Use 4-8 discovery-focused hashtags',
+      snapchat: 'Hashtags not commonly used',
+    };
+
+    return guidelines[platform] || 'Use 5-10 relevant hashtags';
+  }
+
+  private buildUserPrompt(platform: Platform, params: CaptionGenerationParams): string {
+    const {
+      contentFormat,
+      contentDescription,
+      goal = 'engagement',
+      targetAudience = 'general audience',
+      tone = 'relatable',
+      length = 'medium',
+      hashtagLevel = 'medium',
+      ctaType = [],
+      keyPoints = [],
+      avoid = [],
+      niche,
+      brandVoice,
+      emojiPreference,
+      storyEnabled,
+    } = params;
+
+    let prompt = `Platform: ${platform}
+Format: ${contentFormat}
+Goal: ${goal}
+Audience: ${targetAudience}
+Tone: ${tone}
+Length: ${length}
+Hashtag level: ${hashtagLevel}`;
+
+    if (ctaType.length > 0) {
+      prompt += `\nCTA type: ${ctaType.join(', ')}`;
     }
 
-    // Fallback: if parsing failed, try to extract from raw content
-    if (!caption) {
-      const captionMatch = content.match(/CAPTION:\s*(.+?)(?=HASHTAGS:|$)/s);
-      caption = captionMatch ? captionMatch[1].trim() : content;
+    prompt += `\n\nContent description:
+${contentDescription}`;
+
+    if (keyPoints.length > 0) {
+      prompt += `\n\nKey points to include:
+${keyPoints.map((p) => `- ${p}`).join('\n')}`;
     }
 
-    if (hashtags.length === 0) {
-      const hashtagMatch = content.match(/HASHTAGS:\s*(.+)/);
-      if (hashtagMatch) {
-        hashtags = hashtagMatch[1].split(' ').filter((h) => h.startsWith('#'));
-      }
+    if (avoid.length > 0) {
+      prompt += `\n\nAvoid:
+${avoid.map((a) => `- ${a}`).join('\n')}`;
     }
 
-    return { caption, hashtags };
+    if (brandVoice || niche || emojiPreference !== undefined) {
+      prompt += `\n\nBrand voice rules:`;
+      if (brandVoice) prompt += `\n- ${brandVoice}`;
+      if (niche) prompt += `\n- Niche: ${niche}`;
+      if (emojiPreference === false) prompt += `\n- Do not overuse emojis`;
+      else if (emojiPreference === true) prompt += `\n- Use emojis appropriately`;
+    }
+
+    if (storyEnabled !== undefined) {
+      prompt += `\n\nStory enabled: ${storyEnabled}`;
+    }
+
+    return prompt;
   }
 }
