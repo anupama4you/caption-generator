@@ -1,13 +1,8 @@
 import { UserProfile } from '@prisma/client';
 import { PredictedMetrics, Platform } from '../types';
-import { OpenAIService } from './openai.service';
 
 export class AnalyticsService {
-  private openAI: OpenAIService;
-
-  constructor() {
-    this.openAI = new OpenAIService();
-  }
+  constructor() {}
 
   async predictPerformance(
     caption: string,
@@ -23,10 +18,10 @@ export class AnalyticsService {
       platform,
       userProfile?.niche || undefined
     );
-    const keywordScore = await this.openAI.scoreKeywordRelevance(
+    const keywordScore = this.calculateKeywordScore(
       caption,
       userProfile?.niche || 'general',
-      platform
+      hashtags
     );
 
     // Weighted engagement score
@@ -49,7 +44,12 @@ export class AnalyticsService {
     const reachEstimate = this.calculateReachEstimate(engagementScore, platform);
 
     // AI-assisted virality prediction
-    const viralityScore = await this.openAI.predictVirality(caption, hashtags, platform);
+    const viralityScore = this.estimateViralityScore(
+      caption,
+      hashtags,
+      platform,
+      engagementScore
+    );
 
     // Generate improvement tips
     const improvementTips = this.generateImprovementTips(
@@ -314,5 +314,56 @@ export class AnalyticsService {
     if (num >= 1000000) return (num / 1000000).toFixed(1) + 'M';
     if (num >= 1000) return (num / 1000).toFixed(1) + 'K';
     return num.toString();
+  }
+
+  private calculateKeywordScore(caption: string, niche: string, hashtags: string[]): number {
+    const normalizedCaption = caption.toLowerCase();
+    const nicheWords = niche.toLowerCase().split(/\s+/).filter(Boolean);
+    let hits = 0;
+
+    for (const word of nicheWords) {
+      if (normalizedCaption.includes(word)) {
+        hits += 1;
+      }
+    }
+
+    // Count niche words in hashtags too
+    for (const tag of hashtags) {
+      for (const word of nicheWords) {
+        if (tag.toLowerCase().includes(word)) {
+          hits += 0.5;
+        }
+      }
+    }
+
+    const diversityBonus = Math.min(20, new Set(hashtags.map((h) => h.toLowerCase())).size * 2);
+    const baseScore = Math.min(100, (hits / Math.max(nicheWords.length || 1, 1)) * 70);
+
+    return Math.round(Math.min(100, baseScore + diversityBonus));
+  }
+
+  private estimateViralityScore(
+    caption: string,
+    hashtags: string[],
+    platform: Platform,
+    engagementScore: number
+  ): number {
+    const hookScore = caption.length <= 180 ? 20 : 10;
+    const hashtagBoost = Math.min(15, hashtags.length * 1.5);
+    const platformBias: Record<Platform, number> = {
+      instagram: 10,
+      tiktok: 15,
+      youtube_shorts: 12,
+      youtube_long: 8,
+      facebook: 6,
+      linkedin: 4,
+      x: 12,
+      pinterest: 7,
+      snapchat: 14,
+      all: 8,
+    };
+
+    const base = engagementScore * 0.6 + hookScore + hashtagBoost + (platformBias[platform] || 5);
+    return Math.round(Math.min(100, base));
   }
 }

@@ -16,18 +16,8 @@ export class CaptionService {
   async generateCaptionsForAllPlatforms(
     params: CaptionGenerationParams
   ): Promise<PlatformCaptionResult[]> {
-    const results: PlatformCaptionResult[] = [];
-
-    // Determine which platforms to generate for
     const platforms = this.resolvePlatforms(params.platforms);
-
-    // Generate captions for each platform
-    for (const platform of platforms) {
-      const result = await this.generateForPlatform(platform, params);
-      results.push(result);
-    }
-
-    return results;
+    return Promise.all(platforms.map((platform) => this.generateForPlatform(platform, params)));
   }
 
   private resolvePlatforms(requested: Platform[]): Platform[] {

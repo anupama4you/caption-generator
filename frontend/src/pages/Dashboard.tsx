@@ -7,7 +7,7 @@ import {
   Hash, MessageSquare, BarChart3, Zap, Instagram,
   Facebook, Youtube, Video, Image, FileText, Camera,
   LogOut, History as HistoryIcon, User, Loader2,
-  Linkedin, Twitter, Pin, Ghost, Clapperboard, Layers
+  Linkedin, Twitter, Ghost, Clapperboard, Layers
 } from 'lucide-react';
 import { RootState } from '../store/store';
 import { logout } from '../store/authSlice';
@@ -15,17 +15,15 @@ import api from '../services/api';
 import { Caption, Platform, ContentType, UsageStats } from '../types';
 import { CopyToClipboard } from 'react-copy-to-clipboard';
 
-const PLATFORMS: { value: Platform; label: string; icon: any; color: string }[] = [
-  { value: 'instagram', label: 'Instagram', icon: Instagram, color: 'from-purple-500 to-pink-500' },
-  { value: 'tiktok', label: 'TikTok', icon: Video, color: 'from-gray-900 to-gray-700' },
-  { value: 'youtube_shorts', label: 'YouTube Shorts', icon: Youtube, color: 'from-red-600 to-red-400' },
-  { value: 'youtube_long', label: 'YouTube Long', icon: Clapperboard, color: 'from-red-500 to-amber-500' },
-  { value: 'facebook', label: 'Facebook', icon: Facebook, color: 'from-blue-600 to-blue-400' },
-  { value: 'linkedin', label: 'LinkedIn', icon: Linkedin, color: 'from-sky-600 to-blue-400' },
-  { value: 'x', label: 'X (Twitter)', icon: Twitter, color: 'from-gray-900 to-gray-700' },
-  { value: 'pinterest', label: 'Pinterest', icon: Pin, color: 'from-red-600 to-orange-500' },
-  { value: 'snapchat', label: 'Snapchat', icon: Ghost, color: 'from-yellow-400 to-amber-300' },
-  { value: 'all', label: 'All Platforms', icon: Sparkles, color: 'from-indigo-500 to-purple-500' },
+const PLATFORMS: { value: Platform; label: string; icon: any; color: string; supportedContentTypes: ContentType[] }[] = [
+  { value: 'instagram', label: 'Instagram', icon: Instagram, color: 'from-purple-500 to-pink-500', supportedContentTypes: ['short_video', 'image', 'carousel', 'story'] },
+  { value: 'tiktok', label: 'TikTok', icon: Video, color: 'from-gray-900 to-gray-700', supportedContentTypes: ['short_video'] },
+  { value: 'youtube_shorts', label: 'YouTube Shorts', icon: Youtube, color: 'from-red-600 to-red-400', supportedContentTypes: ['short_video'] },
+  { value: 'youtube_long', label: 'YouTube Long', icon: Clapperboard, color: 'from-red-500 to-amber-500', supportedContentTypes: ['long_video'] },
+  { value: 'facebook', label: 'Facebook', icon: Facebook, color: 'from-blue-600 to-blue-400', supportedContentTypes: ['short_video', 'long_video', 'image', 'carousel', 'story', 'text_only'] },
+  { value: 'linkedin', label: 'LinkedIn', icon: Linkedin, color: 'from-sky-600 to-blue-400', supportedContentTypes: ['long_video', 'image', 'carousel', 'text_only'] },
+  { value: 'x', label: 'X (Twitter)', icon: Twitter, color: 'from-gray-900 to-gray-700', supportedContentTypes: ['image', 'text_only'] },
+  { value: 'snapchat', label: 'Snapchat', icon: Ghost, color: 'from-yellow-400 to-amber-300', supportedContentTypes: ['short_video', 'image', 'story'] },
 ];
 
 const CONTENT_TYPES: { value: ContentType; label: string; icon: any }[] = [
@@ -37,16 +35,19 @@ const CONTENT_TYPES: { value: ContentType; label: string; icon: any }[] = [
   { value: 'text_only', label: 'Text Only', icon: FileText },
 ];
 
+// Maximum platforms allowed for free users
+const MAX_FREE_PLATFORMS = 4;
+
 export default function Dashboard() {
   const { user } = useSelector((state: RootState) => state.auth);
   const dispatch = useDispatch();
   const navigate = useNavigate();
 
   const [selectedPlatforms, setSelectedPlatforms] = useState<Platform[]>([
+    'facebook',
     'instagram',
     'tiktok',
     'youtube_shorts',
-    'facebook',
   ]);
   const [contentType, setContentType] = useState<ContentType>('short_video');
   const [description, setDescription] = useState('');
@@ -56,9 +57,37 @@ export default function Dashboard() {
   const [usage, setUsage] = useState<UsageStats | null>(null);
   const [copiedId, setCopiedId] = useState<string | null>(null);
 
+  // Get available platforms based on content type
+  const getAvailablePlatforms = () => {
+    return PLATFORMS.filter(p => p.supportedContentTypes.includes(contentType));
+  };
+
+  // Check if user is on free tier
+  const isFreeUser = user?.subscriptionTier === 'FREE';
+
   useEffect(() => {
     fetchUsage();
   }, []);
+
+  // Update selected platforms when content type changes
+  useEffect(() => {
+    const availablePlatforms = getAvailablePlatforms();
+    const availablePlatformValues = availablePlatforms.map(p => p.value);
+
+    // Filter out platforms that don't support the new content type
+    setSelectedPlatforms(prev => {
+      const filtered = prev.filter(p => availablePlatformValues.includes(p));
+
+      // If no platforms are selected after filtering, set defaults
+      if (filtered.length === 0) {
+        const defaults = ['facebook', 'instagram', 'tiktok', 'youtube_shorts']
+          .filter(p => availablePlatformValues.includes(p as Platform));
+        return defaults.slice(0, isFreeUser ? MAX_FREE_PLATFORMS : defaults.length) as Platform[];
+      }
+
+      return filtered;
+    });
+  }, [contentType]);
 
   const fetchUsage = async () => {
     try {
@@ -70,16 +99,21 @@ export default function Dashboard() {
   };
 
   const togglePlatform = (platform: Platform) => {
-    if (platform === 'all') {
-      setSelectedPlatforms(prev => (prev.includes('all') ? [] : ['all']));
-      return;
-    }
-
     setSelectedPlatforms(prev => {
-      const withoutAll = prev.filter(p => p !== 'all');
-      return withoutAll.includes(platform)
-        ? withoutAll.filter(p => p !== platform)
-        : [...withoutAll, platform];
+      // If platform is already selected, remove it
+      if (prev.includes(platform)) {
+        return prev.filter(p => p !== platform);
+      }
+
+      // Check if free user is at limit
+      if (isFreeUser && prev.length >= MAX_FREE_PLATFORMS) {
+        setError(`Free tier allows up to ${MAX_FREE_PLATFORMS} platforms. Upgrade to Premium for unlimited platforms!`);
+        setTimeout(() => setError(''), 3000);
+        return prev;
+      }
+
+      // Add the platform
+      return [...prev, platform];
     });
   };
 
@@ -259,48 +293,6 @@ export default function Dashboard() {
             </AnimatePresence>
 
             <form onSubmit={handleGenerate} className="space-y-6">
-              {/* Platform Selection */}
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-3">
-                  Select Platforms
-                </label>
-                <div className="grid grid-cols-2 gap-3">
-                  {PLATFORMS.map((platform) => {
-                    const Icon = platform.icon;
-                    const isSelected = selectedPlatforms.includes(platform.value);
-                    return (
-                      <motion.button
-                        key={platform.value}
-                        type="button"
-                        onClick={() => togglePlatform(platform.value)}
-                        whileHover={{ scale: 1.02 }}
-                        whileTap={{ scale: 0.98 }}
-                        className={`relative overflow-hidden p-4 rounded-xl border-2 transition-all ${
-                          isSelected
-                            ? 'border-indigo-500 bg-indigo-50'
-                            : 'border-gray-200 bg-white hover:border-gray-300'
-                        }`}
-                      >
-                        {isSelected && (
-                          <motion.div
-                            layoutId="selected"
-                            className="absolute top-2 right-2 bg-indigo-600 text-white rounded-full p-1"
-                          >
-                            <Check className="w-3 h-3" />
-                          </motion.div>
-                        )}
-                        <div className="flex items-center gap-2">
-                          <Icon className={`w-5 h-5 ${isSelected ? 'text-indigo-600' : 'text-gray-500'}`} />
-                          <span className={`text-sm font-medium ${isSelected ? 'text-indigo-900' : 'text-gray-700'}`}>
-                            {platform.label}
-                          </span>
-                        </div>
-                      </motion.button>
-                    );
-                  })}
-                </div>
-              </div>
-
               {/* Content Type */}
               <div>
                 <label className="block text-sm font-semibold text-gray-700 mb-3">
@@ -333,6 +325,61 @@ export default function Dashboard() {
                     );
                   })}
                 </div>
+              </div>
+
+              {/* Platform Selection */}
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-3">
+                  Select Platforms
+                  {isFreeUser && (
+                    <span className="ml-2 text-xs text-gray-500">
+                      ({selectedPlatforms.length}/{MAX_FREE_PLATFORMS} selected)
+                    </span>
+                  )}
+                </label>
+                <div className="grid grid-cols-2 gap-3">
+                  {getAvailablePlatforms().map((platform) => {
+                    const Icon = platform.icon;
+                    const isSelected = selectedPlatforms.includes(platform.value);
+                    const isDisabled = isFreeUser && !isSelected && selectedPlatforms.length >= MAX_FREE_PLATFORMS;
+
+                    return (
+                      <motion.button
+                        key={platform.value}
+                        type="button"
+                        onClick={() => togglePlatform(platform.value)}
+                        whileHover={{ scale: isDisabled ? 1 : 1.02 }}
+                        whileTap={{ scale: isDisabled ? 1 : 0.98 }}
+                        disabled={isDisabled}
+                        className={`relative overflow-hidden p-4 rounded-xl border-2 transition-all ${
+                          isSelected
+                            ? 'border-indigo-500 bg-indigo-50'
+                            : isDisabled
+                            ? 'border-gray-200 bg-gray-50 opacity-50 cursor-not-allowed'
+                            : 'border-gray-200 bg-white hover:border-gray-300'
+                        }`}
+                      >
+                        {isSelected && (
+                          <div className="absolute top-2 right-2 bg-indigo-600 text-white rounded-full p-1">
+                            <Check className="w-3 h-3" />
+                          </div>
+                        )}
+                        <div className="flex items-center gap-2">
+                          <Icon className={`w-5 h-5 ${isSelected ? 'text-indigo-600' : isDisabled ? 'text-gray-400' : 'text-gray-500'}`} />
+                          <span className={`text-sm font-medium ${isSelected ? 'text-indigo-900' : isDisabled ? 'text-gray-400' : 'text-gray-700'}`}>
+                            {platform.label}
+                          </span>
+                        </div>
+                      </motion.button>
+                    );
+                  })}
+                </div>
+                {isFreeUser && selectedPlatforms.length >= MAX_FREE_PLATFORMS && (
+                  <p className="text-xs text-amber-600 mt-2 flex items-center gap-1">
+                    <Zap className="w-3 h-3" />
+                    Upgrade to Premium for unlimited platform selection
+                  </p>
+                )}
               </div>
 
               {/* Description */}
@@ -413,6 +460,7 @@ export default function Dashboard() {
                   <div className="space-y-4 max-h-[calc(100vh-200px)] overflow-y-auto pr-2">
                     {generatedCaptions.map((caption, index) => {
                       const platformMeta = PLATFORMS.find(p => p.value === caption.platform);
+                      const PlatformIcon = platformMeta?.icon;
                       return (
                         <motion.div
                           key={caption.id}
@@ -423,7 +471,7 @@ export default function Dashboard() {
                         >
                           <div className="flex justify-between items-center mb-3">
                             <span className="px-3 py-1.5 bg-gradient-to-r from-indigo-500 to-purple-500 text-white rounded-full text-xs font-bold flex items-center gap-1">
-                              {platformMeta?.icon && <span>{platformMeta.icon({ className: 'w-3 h-3' })}</span>}
+                              {PlatformIcon && <PlatformIcon className="w-3 h-3" />}
                               {platformMeta?.label ?? caption.platform}
                             </span>
                             <span className="text-xs text-gray-500 font-medium">
@@ -442,13 +490,13 @@ export default function Dashboard() {
                               transition={{ delay: index * 0.1 + idx * 0.05 }}
                               className="text-indigo-600 text-sm font-medium bg-indigo-50 px-2 py-1 rounded-lg"
                             >
-                              {tag}
+                              {tag.startsWith('#') ? tag : `#${tag}`}
                             </motion.span>
                           ))}
                         </div>
 
                         <CopyToClipboard
-                          text={`${caption.generatedCaption}\n\n${caption.hashtags.join(' ')}`}
+                          text={`${caption.generatedCaption}\n\n${caption.hashtags.map(tag => tag.startsWith('#') ? tag : `#${tag}`).join(' ')}`}
                           onCopy={() => {
                             setCopiedId(caption.id);
                             setTimeout(() => setCopiedId(null), 2000);
