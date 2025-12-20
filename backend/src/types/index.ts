@@ -49,6 +49,7 @@ export interface CaptionGenerationParams {
   keyPoints?: string[];
   avoid?: string[];
   storyEnabled?: boolean;
+  userProfile?: UserProfile | null;
 }
 
 export interface CaptionVariant {

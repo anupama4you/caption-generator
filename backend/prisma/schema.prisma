@@ -37,60 +37,67 @@ enum ContentFormat {
 }
 
 model User {
-  id                String            @id @default(uuid())
-  email             String            @unique
-  password          String
-  name              String
-  createdAt         DateTime          @default(now())
-  updatedAt         DateTime          @updatedAt
+  id        String   @id @default(uuid())
+  email     String   @unique
+  password  String
+  name      String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   // Subscription & Usage Tracking
-  subscriptionTier  SubscriptionTier  @default(FREE)
+  subscriptionTier  SubscriptionTier @default(FREE)
   subscriptionStart DateTime?
   subscriptionEnd   DateTime?
 
   // Relations
-  profile           UserProfile?
-  captionAttempts   CaptionAttempt[]
-  usageTracking     UsageTracking[]
+  profile         UserProfile?
+  captionAttempts CaptionAttempt[]
+  usageTracking   UsageTracking[]
 
   @@index([email])
 }
 
 model UserProfile {
-  id                String   @id @default(uuid())
-  userId            String   @unique
-  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id     String @id @default(uuid())
+  userId String @unique
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   // Customization Fields
-  niche             String?          // e.g., "fitness", "food", "travel"
-  brandVoice        String?          // e.g., "professional", "casual", "humorous"
-  targetAudience    String?          // e.g., "millennials", "fitness enthusiasts"
-  preferredPlatforms Platform[]      // Array of preferred platforms
+  niche              String? // e.g., "fitness", "food", "travel"
+  brandVoice         String? // e.g., "professional", "casual", "humorous"
+  targetAudience     String? // e.g., "millennials", "fitness enthusiasts"
+  preferredPlatforms Platform[] // Array of preferred platforms
 
   // Additional preferences
-  emojiPreference   Boolean          @default(true)
-  hashtagCount      Int              @default(10)
+  emojiPreference  Boolean @default(true)
+  defaultHashtags  String? // Default hashtags to always include (space-separated)
 
-  createdAt         DateTime         @default(now())
-  updatedAt         DateTime         @updatedAt
+  // Caption Control Settings
+  toneOfVoice      String? // e.g., "friendly", "authoritative", "playful", "informative"
+  includeQuestions Boolean @default(true) // Include questions to boost engagement
+  ctaStyle         String  @default("moderate") // "strong" (direct CTAs), "moderate" (subtle CTAs), "none" (no CTAs)
+  avoidClickbait   Boolean @default(false) // Avoid sensational/clickbait language
+  formalityLevel   String  @default("balanced") // "formal", "balanced", "casual"
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 model UsageTracking {
-  id                String   @id @default(uuid())
-  userId            String
-  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id     String @id @default(uuid())
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   // Monthly tracking (resets every month)
-  month             Int              // 1-12
-  year              Int              // 2024, 2025, etc.
-  captionsGenerated Int              @default(0)
+  month             Int // 1-12
+  year              Int // 2024, 2025, etc.
+  captionsGenerated Int @default(0)
 
   // Limits based on tier
-  monthlyLimit      Int              // 10 for FREE, 100 for PREMIUM
+  monthlyLimit Int // 10 for FREE, 100 for PREMIUM
 
-  createdAt         DateTime         @default(now())
-  updatedAt         DateTime         @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@unique([userId, month, year])
   @@index([userId, month, year])
@@ -98,97 +105,96 @@ model UsageTracking {
 
 // Represents a single generation attempt
 model CaptionAttempt {
-  id                String       @id @default(uuid())
-  userId            String
-  user              User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id     String @id @default(uuid())
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   // Input Details
-  contentFormat     ContentFormat
-  contentDescription String      @db.Text
+  contentFormat      ContentFormat
+  contentDescription String        @db.Text
 
   // User preferences at time of generation
-  niche             String?
-  brandVoice        String?
-  targetAudience    String?
-  emojiPreference   Boolean      @default(true)
-  hashtagCount      Int          @default(10)
+  niche           String?
+  brandVoice      String?
+  targetAudience  String?
+  emojiPreference Boolean @default(true)
 
   // Metadata
-  isFavorite        Boolean      @default(false)
-  createdAt         DateTime     @default(now())
+  isFavorite Boolean  @default(false)
+  createdAt  DateTime @default(now())
 
   // Relations
-  captions          Caption[]
+  captions Caption[]
 
   @@index([userId, createdAt])
 }
 
 // Individual caption variant for a platform
 model Caption {
-  id                String            @id @default(uuid())
-  attemptId         String
-  attempt           CaptionAttempt    @relation(fields: [attemptId], references: [id], onDelete: Cascade)
+  id        String         @id @default(uuid())
+  attemptId String
+  attempt   CaptionAttempt @relation(fields: [attemptId], references: [id], onDelete: Cascade)
 
   // Platform specific
-  platform          Platform
-  variantNumber     Int               @default(1) // 1, 2, or 3
+  platform      Platform
+  variantNumber Int      @default(1) // 1, 2, or 3
 
   // Generated Content
-  generatedCaption  String            @db.Text
-  hashtags          String[]          // Empty for stories and certain platforms
-  hashtagReason     String?           // Why hashtags not recommended (if empty)
+  generatedCaption String   @db.Text
+  hashtags         String[] // Empty for stories and certain platforms
+  hashtagReason    String? // Why hashtags not recommended (if empty)
 
   // Story-specific fields
-  storySlides       String[]          // Array of slide texts (if story format)
+  storySlides String[] // Array of slide texts (if story format)
 
   // Analytics Prediction
-  analytics         CaptionAnalytics?
+  analytics CaptionAnalytics?
 
-  createdAt         DateTime          @default(now())
+  createdAt DateTime @default(now())
 
   @@index([attemptId])
   @@index([platform])
 }
 
 model CaptionAnalytics {
-  id                String   @id @default(uuid())
-  captionId         String   @unique
-  caption           Caption  @relation(fields: [captionId], references: [id], onDelete: Cascade)
+  id        String  @id @default(uuid())
+  captionId String  @unique
+  caption   Caption @relation(fields: [captionId], references: [id], onDelete: Cascade)
 
   // Predicted Metrics
-  engagementScore   Float            // 0-100 score
-  reachEstimate     String           // e.g., "2.5K - 5K"
-  viralityScore     Float            // 0-100 score
+  engagementScore Float // 0-100 score
+  reachEstimate   String // e.g., "2.5K - 5K"
+  viralityScore   Float // 0-100 score
 
   // Component Scores (what contributes to the overall score)
-  hashtagScore      Float            // Quality of hashtags
-  lengthScore       Float            // Caption length optimization
-  emojiScore        Float            // Emoji usage effectiveness
-  timingScore       Float            // Best time to post
-  keywordScore      Float            // Keyword relevance
+  hashtagScore Float // Quality of hashtags
+  lengthScore  Float // Caption length optimization
+  emojiScore   Float // Emoji usage effectiveness
+  timingScore  Float // Best time to post
+  keywordScore Float // Keyword relevance
 
   // Recommendations
-  bestPostingTime   String[]         // e.g., ["9:00 AM", "6:00 PM"]
-  improvementTips   String[]         // Suggestions for improvement
+  bestPostingTime String[] // e.g., ["9:00 AM", "6:00 PM"]
+  improvementTips String[] // Suggestions for improvement
 
-  createdAt         DateTime         @default(now())
+  createdAt DateTime @default(now())
 }
 
 model TrendingHashtag {
-  id                String   @id @default(uuid())
-  hashtag           String
-  platform          Platform
+  id       String   @id @default(uuid())
+  hashtag  String
+  platform Platform
 
   // Trend Metrics
-  trendScore        Float            // 0-100 how trending
-  category          String           // e.g., "fitness", "food"
-  usageCount        Int              @default(0)
+  trendScore Float // 0-100 how trending
+  category   String // e.g., "fitness", "food"
+  usageCount Int    @default(0)
 
   // Freshness
-  isActive          Boolean          @default(true)
-  lastUpdated       DateTime         @default(now())
+  isActive    Boolean  @default(true)
+  lastUpdated DateTime @default(now())
 
-  createdAt         DateTime         @default(now())
+  createdAt DateTime @default(now())
 
   @@unique([hashtag, platform])
   @@index([platform, category, trendScore])
@@ -196,19 +202,19 @@ model TrendingHashtag {
 }
 
 model SubscriptionPlan {
-  id                String   @id @default(uuid())
-  tier              SubscriptionTier @unique
+  id   String           @id @default(uuid())
+  tier SubscriptionTier @unique
 
   // Limits
   monthlyCaptionLimit Int
 
   // Features
-  features          String[]         // Array of feature descriptions
+  features String[] // Array of feature descriptions
 
   // Pricing
-  price             Float
-  currency          String           @default("USD")
+  price    Float
+  currency String @default("USD")
 
-  createdAt         DateTime         @default(now())
-  updatedAt         DateTime         @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }

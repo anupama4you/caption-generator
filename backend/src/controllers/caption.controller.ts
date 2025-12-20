@@ -55,7 +55,7 @@ export class CaptionController {
         brandVoice: otherParams.brandVoice || userProfile?.brandVoice || undefined,
         targetAudience: otherParams.targetAudience || userProfile?.targetAudience || undefined,
         emojiPreference: otherParams.emojiPreference ?? userProfile?.emojiPreference ?? true,
-        hashtagCount: otherParams.hashtagCount || userProfile?.hashtagCount || 10,
+        userProfile: userProfile || undefined,
         ...otherParams,
       };
 
@@ -72,7 +72,6 @@ export class CaptionController {
           brandVoice: params.brandVoice || null,
           targetAudience: params.targetAudience || null,
           emojiPreference: params.emojiPreference ?? true,
-          hashtagCount: params.hashtagCount ?? 10,
         },
       });
 
@@ -155,8 +154,11 @@ export class CaptionController {
         prisma.captionAttempt.findMany({
           where: { userId: req.user.id },
           include: {
-            _count: {
-              select: { captions: true },
+            captions: {
+              include: {
+                analytics: true,
+              },
+              orderBy: [{ platform: 'asc' }, { variantNumber: 'asc' }],
             },
           },
           orderBy: { createdAt: 'desc' },

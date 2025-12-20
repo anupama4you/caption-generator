@@ -16,12 +16,74 @@ export class OpenAIService {
     developerPrompt: string,
     userPrompt: string,
     platform: Platform,
-    _format: ContentFormat
+    _format: ContentFormat,
+    userProfile?: {
+      toneOfVoice?: string;
+      includeQuestions?: boolean;
+      ctaStyle?: string;
+      avoidClickbait?: boolean;
+      formalityLevel?: string;
+      emojiPreference?: boolean;
+    }
   ): Promise<OpenAICaptionResponse> {
     try {
       const platformGuidance = this.getPlatformGuidelines(platform);
       const formatGuidance = this.getFormatGuidelines(_format);
+
+      // Build user preferences guidance
+      let userPreferences = '';
+      if (userProfile) {
+        const prefs = [];
+
+        if (userProfile.toneOfVoice) {
+          prefs.push(`Tone: ${userProfile.toneOfVoice}`);
+        }
+
+        if (userProfile.formalityLevel) {
+          const formalityMap: Record<string, string> = {
+            'formal': 'Use formal, professional language. Avoid contractions and slang.',
+            'balanced': 'Mix professional and conversational language appropriately.',
+            'casual': 'Use casual, conversational language. Contractions and friendly tone are welcome.'
+          };
+          prefs.push(formalityMap[userProfile.formalityLevel] || '');
+        }
+
+        if (userProfile.emojiPreference !== undefined) {
+          prefs.push(userProfile.emojiPreference
+            ? 'Use emojis appropriately when they enhance the message'
+            : 'Avoid using emojis or use them very sparingly');
+        }
+
+        if (userProfile.includeQuestions !== undefined) {
+          prefs.push(userProfile.includeQuestions
+            ? 'Include engaging questions to boost interaction'
+            : 'Avoid using questions in the caption');
+        }
+
+        if (userProfile.ctaStyle) {
+          const ctaMap: Record<string, string> = {
+            'strong': 'Use direct, action-oriented CTAs (e.g., "Click the link!", "Buy now!", "Sign up today!")',
+            'moderate': 'Use subtle, friendly CTAs (e.g., "Check it out", "Learn more", "See our story")',
+            'none': 'Do not include any call-to-action'
+          };
+          prefs.push(ctaMap[userProfile.ctaStyle] || '');
+        }
+
+        if (userProfile.avoidClickbait) {
+          prefs.push('Avoid clickbait, sensational language, or exaggerated claims. Be authentic and straightforward.');
+        }
+
+        if (prefs.length > 0) {
+          userPreferences = `\n\nUser Style Preferences:\n${prefs.filter(Boolean).map(p => `- ${p}`).join('\n')}`;
+        }
+      }
+
       const enrichedDeveloperPrompt = `${developerPrompt}
+
+Variant diversity:
+- Provide 3 clearly distinct variants: one short, one medium, one long (all within platform limits).
+- Change the opening hook, CTA wording, and hashtag mix in each variant.
+- Avoid repeating sentences or identical hashtag sets across variants.
 
 Platform alignment:
 - Target platform: ${platform}
@@ -29,12 +91,13 @@ Platform alignment:
 
 Format alignment:
 - Target format: ${_format}
-- ${formatGuidance}
+- ${formatGuidance}${userPreferences}
 
 Non-negotiable rules:
 - Do not mix platform norms (e.g., avoid LinkedIn tone on TikTok).
 - Respect character and hashtag norms for the platform above.
-- Match the caption to the content format so the CTA and structure make sense.`;
+- Match the caption to the content format so the CTA and structure make sense.
+- Follow all user style preferences exactly as specified above.`;
 
       const response = await this.client.chat.completions.create({
         model: "gpt-4o-mini",

@@ -26,7 +26,18 @@ export class ProfileController {
         return res.status(401).json({ error: 'Unauthorized' });
       }
 
-      const { niche, brandVoice, targetAudience, emojiPreference, hashtagCount } = req.body;
+      const {
+        niche,
+        brandVoice,
+        targetAudience,
+        emojiPreference,
+        defaultHashtags,
+        toneOfVoice,
+        includeQuestions,
+        ctaStyle,
+        avoidClickbait,
+        formalityLevel
+      } = req.body;
 
       const profile = await prisma.userProfile.upsert({
         where: { userId: req.user.id },
@@ -35,7 +46,12 @@ export class ProfileController {
           brandVoice,
           targetAudience,
           emojiPreference,
-          hashtagCount,
+          defaultHashtags,
+          toneOfVoice,
+          includeQuestions,
+          ctaStyle,
+          avoidClickbait,
+          formalityLevel,
         },
         create: {
           userId: req.user.id,
@@ -43,7 +59,12 @@ export class ProfileController {
           brandVoice,
           targetAudience,
           emojiPreference: emojiPreference ?? true,
-          hashtagCount: hashtagCount ?? 10,
+          defaultHashtags,
+          toneOfVoice,
+          includeQuestions: includeQuestions ?? true,
+          ctaStyle: ctaStyle || 'moderate',
+          avoidClickbait: avoidClickbait ?? false,
+          formalityLevel: formalityLevel || 'balanced',
         },
       });
 

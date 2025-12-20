@@ -319,27 +319,68 @@ export class AnalyticsService {
   private calculateKeywordScore(caption: string, niche: string, hashtags: string[]): number {
     const normalizedCaption = caption.toLowerCase();
     const nicheWords = niche.toLowerCase().split(/\s+/).filter(Boolean);
-    let hits = 0;
+    let score = 50; // Start with base score instead of 0
 
-    for (const word of nicheWords) {
-      if (normalizedCaption.includes(word)) {
-        hits += 1;
+    // If no niche provided, use general content quality metrics
+    if (nicheWords.length === 0 || niche === 'general') {
+      // Check for action words and engagement indicators
+      const actionWords = ['discover', 'learn', 'explore', 'join', 'get', 'try', 'find', 'see', 'watch', 'check'];
+      const engagementWords = ['you', 'your', 'today', 'now', 'here', 'this', 'new'];
+
+      let actionCount = 0;
+      let engagementCount = 0;
+
+      for (const word of actionWords) {
+        if (normalizedCaption.includes(word)) actionCount++;
       }
-    }
+      for (const word of engagementWords) {
+        if (normalizedCaption.includes(word)) engagementCount++;
+      }
 
-    // Count niche words in hashtags too
-    for (const tag of hashtags) {
+      score = 50 + Math.min(30, actionCount * 10) + Math.min(20, engagementCount * 5);
+    } else {
+      // Niche-specific scoring
+      let nicheHits = 0;
+
+      // Count niche word matches in caption (more lenient)
       for (const word of nicheWords) {
-        if (tag.toLowerCase().includes(word)) {
-          hits += 0.5;
+        if (word.length <= 2) continue; // Skip short words like "of", "in"
+        if (normalizedCaption.includes(word)) {
+          nicheHits += 1;
         }
       }
+
+      // Count niche words in hashtags
+      let hashtagHits = 0;
+      for (const tag of hashtags) {
+        const normalizedTag = tag.toLowerCase();
+        for (const word of nicheWords) {
+          if (word.length <= 2) continue;
+          if (normalizedTag.includes(word)) {
+            hashtagHits += 1;
+            break; // Count each hashtag only once
+          }
+        }
+      }
+
+      // More lenient scoring: if you hit ANY niche words, give good score
+      const relevantNicheWords = nicheWords.filter(w => w.length > 2);
+      if (relevantNicheWords.length > 0) {
+        const captionRelevance = Math.min(40, (nicheHits / relevantNicheWords.length) * 60);
+        const hashtagRelevance = Math.min(20, hashtagHits * 5);
+        score = 40 + captionRelevance + hashtagRelevance;
+      }
     }
 
-    const diversityBonus = Math.min(20, new Set(hashtags.map((h) => h.toLowerCase())).size * 2);
-    const baseScore = Math.min(100, (hits / Math.max(nicheWords.length || 1, 1)) * 70);
+    // Hashtag diversity bonus
+    const uniqueHashtags = new Set(hashtags.map((h) => h.toLowerCase())).size;
+    const diversityBonus = Math.min(20, uniqueHashtags * 2);
 
-    return Math.round(Math.min(100, baseScore + diversityBonus));
+    // Caption length bonus (longer captions tend to have more keywords)
+    const lengthBonus = Math.min(10, Math.floor(caption.length / 50));
+
+    const finalScore = Math.min(100, score + diversityBonus + lengthBonus);
+    return Math.round(finalScore);
   }
 
   private estimateViralityScore(

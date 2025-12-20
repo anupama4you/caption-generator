@@ -31,7 +31,6 @@ export class AuthService {
       data: {
         userId: user.id,
         emojiPreference: true,
-        hashtagCount: 10,
       },
     });
 

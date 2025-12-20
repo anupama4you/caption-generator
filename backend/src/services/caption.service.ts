@@ -46,23 +46,50 @@ export class CaptionService {
     const systemPrompt = this.getSystemPrompt();
     const developerPrompt = this.getDeveloperPrompt(platform, params.contentFormat);
 
+    // Extract user profile preferences for OpenAI
+    const userProfilePrefs = params.userProfile ? {
+      toneOfVoice: params.userProfile.toneOfVoice || undefined,
+      includeQuestions: params.userProfile.includeQuestions,
+      ctaStyle: params.userProfile.ctaStyle || undefined,
+      avoidClickbait: params.userProfile.avoidClickbait,
+      formalityLevel: params.userProfile.formalityLevel || undefined,
+      emojiPreference: params.userProfile.emojiPreference,
+    } : undefined;
+
     // Generate with OpenAI
     const response = await this.openAI.generateCaptionWithStructuredOutput(
       systemPrompt,
       developerPrompt,
       prompt,
       platform,
-      params.contentFormat
+      params.contentFormat,
+      userProfilePrefs
     );
+
+    // Parse default hashtags from user profile
+    const defaultHashtags = params.userProfile?.defaultHashtags
+      ? params.userProfile.defaultHashtags
+          .split(/\s+/)
+          .filter(tag => tag.trim())
+          .map(tag => tag.startsWith('#') ? tag : `#${tag}`)
+      : [];
 
     return {
       platform,
-      variants: response.variants.map((v) => ({
-        caption: v.caption,
-        hashtags: v.hashtags || [],
-        hashtagReason: v.hashtag_explanation,
-        storySlides: v.story_slides,
-      })),
+      variants: response.variants.map((v) => {
+        // Merge default hashtags with generated hashtags, removing duplicates
+        const generatedHashtags = (v.hashtags || []).map(tag =>
+          tag.startsWith('#') ? tag : `#${tag}`
+        );
+        const allHashtags = [...new Set([...generatedHashtags, ...defaultHashtags])];
+
+        return {
+          caption: v.caption,
+          hashtags: allHashtags,
+          hashtagReason: v.hashtag_explanation,
+          storySlides: v.story_slides,
+        };
+      }),
     };
   }
 
@@ -176,6 +203,7 @@ Return ONLY valid JSON matching this schema:
       brandVoice,
       emojiPreference,
       storyEnabled,
+      hashtagCount,
     } = params;
 
     let prompt = `Platform: ${platform}
@@ -185,6 +213,20 @@ Audience: ${targetAudience}
 Tone: ${tone}
 Length: ${length}
 Hashtag level: ${hashtagLevel}`;
+
+    const profileSettings: string[] = [];
+    if (brandVoice) profileSettings.push(`Brand voice: ${brandVoice}`);
+    if (niche) profileSettings.push(`Niche: ${niche}`);
+    if (targetAudience) profileSettings.push(`Audience focus: ${targetAudience}`);
+    if (emojiPreference !== undefined)
+      profileSettings.push(
+        `Emoji preference: ${emojiPreference ? 'use when natural' : 'avoid overuse'}`
+      );
+    if (hashtagCount !== undefined) profileSettings.push(`Preferred hashtag count: ${hashtagCount}`);
+
+    if (profileSettings.length > 0) {
+      prompt += `\nProfile settings:\n- ${profileSettings.join('\n- ')}`;
+    }
 
     if (ctaType.length > 0) {
       prompt += `\nCTA type: ${ctaType.join(', ')}`;

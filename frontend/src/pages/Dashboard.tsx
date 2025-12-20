@@ -7,7 +7,7 @@ import {
   Hash, MessageSquare, BarChart3, Zap, Instagram,
   Facebook, Youtube, Video, Image, FileText, Camera,
   LogOut, History as HistoryIcon, User, Loader2,
-  Linkedin, Twitter, Ghost, Clapperboard, Layers
+  Linkedin, Twitter, Ghost, Clapperboard, Layers, ChevronDown, ChevronUp
 } from 'lucide-react';
 import { RootState } from '../store/store';
 import { logout } from '../store/authSlice';
@@ -56,6 +56,7 @@ export default function Dashboard() {
   const [generatedCaptions, setGeneratedCaptions] = useState<Caption[]>([]);
   const [usage, setUsage] = useState<UsageStats | null>(null);
   const [copiedId, setCopiedId] = useState<string | null>(null);
+  const [expandedAnalytics, setExpandedAnalytics] = useState<Record<string, boolean>>({});
 
   // Get available platforms based on content type
   const getAvailablePlatforms = () => {
@@ -266,18 +267,21 @@ export default function Dashboard() {
           </motion.div>
         )}
 
-        <div className="grid lg:grid-cols-2 gap-6 lg:gap-8">
-          {/* Generation Form */}
-          <motion.div
-            initial={{ opacity: 0, x: -20 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ delay: 0.3 }}
-            className="bg-white rounded-2xl shadow-lg p-6 sm:p-8 border border-gray-100"
-          >
-            <div className="flex items-center gap-2 mb-6">
-              <Sparkles className="w-6 h-6 text-indigo-600" />
-              <h3 className="text-xl sm:text-2xl font-bold text-gray-900">Generate Caption</h3>
-            </div>
+        {/* Conditional Layout: Show form OR results */}
+        {generatedCaptions.length === 0 ? (
+          /* Generation Form - Two column layout */
+          <div className="grid lg:grid-cols-3 gap-6">
+            {/* Left: Generation Form */}
+            <motion.div
+              initial={{ opacity: 0, x: -20 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ delay: 0.3 }}
+              className="lg:col-span-2 bg-white rounded-2xl shadow-lg p-6 sm:p-8 border border-gray-100"
+            >
+              <div className="flex items-center gap-2 mb-6">
+                <Sparkles className="w-6 h-6 text-indigo-600" />
+                <h3 className="text-xl sm:text-2xl font-bold text-gray-900">Generate Caption</h3>
+              </div>
 
             <AnimatePresence>
               {error && (
@@ -420,247 +424,435 @@ export default function Dashboard() {
             </form>
           </motion.div>
 
-          {/* Generated Captions */}
-          <div className="lg:sticky lg:top-24 lg:self-start">
-            <AnimatePresence mode="wait">
-              {loading ? (
+          {/* Right: Benefits/Why This App Card */}
+          <motion.div
+            initial={{ opacity: 0, x: 20 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ delay: 0.4 }}
+            className="space-y-6"
+          >
+            {/* Why This App Card */}
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ delay: 0.5, duration: 0.4 }}
+              whileHover={{ scale: 1.02 }}
+              className="bg-gradient-to-br from-indigo-500 via-purple-500 to-purple-600 rounded-2xl shadow-xl p-6 text-white relative overflow-hidden"
+            >
+              {/* Animated background effect */}
+              <motion.div
+                className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/10 to-white/0"
+                animate={{
+                  x: ['-100%', '100%'],
+                }}
+                transition={{
+                  duration: 3,
+                  repeat: Infinity,
+                  repeatDelay: 1,
+                  ease: "easeInOut",
+                }}
+              />
+
+              <div className="relative z-10">
                 <motion.div
-                  key="loader"
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  exit={{ opacity: 0 }}
-                  className="bg-white rounded-2xl shadow-lg p-8 border border-gray-100 flex flex-col items-center justify-center min-h-[400px]"
+                  initial={{ y: -10, opacity: 0 }}
+                  animate={{ y: 0, opacity: 1 }}
+                  transition={{ delay: 0.6 }}
+                  className="flex items-center gap-2 mb-4"
                 >
                   <motion.div
-                    animate={{ rotate: 360 }}
-                    transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
+                    animate={{ rotate: [0, 10, -10, 0] }}
+                    transition={{ duration: 2, repeat: Infinity, repeatDelay: 3 }}
                   >
-                    <Sparkles className="w-16 h-16 text-indigo-600" />
+                    <Zap className="w-6 h-6" />
                   </motion.div>
-                  <p className="mt-4 text-gray-600 font-medium">Creating amazing captions...</p>
+                  <h4 className="text-xl font-bold">Why Choose Us?</h4>
                 </motion.div>
-              ) : generatedCaptions.length > 0 ? (
-                <motion.div
-                  key="captions"
-                  initial={{ opacity: 0, x: 20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  exit={{ opacity: 0, x: 20 }}
-                  className="bg-white rounded-2xl shadow-lg p-6 border border-gray-100"
+                <motion.p
+                  initial={{ y: 10, opacity: 0 }}
+                  animate={{ y: 0, opacity: 1 }}
+                  transition={{ delay: 0.7 }}
+                  className="text-indigo-100 text-sm mb-6"
                 >
-                  <div className="flex justify-between items-center mb-6">
-                    <h3 className="text-xl font-bold text-gray-900 flex items-center gap-2">
-                      <BarChart3 className="w-6 h-6 text-indigo-600" />
-                      Generated Captions
-                    </h3>
-                    <span className="px-3 py-1 bg-gradient-to-r from-indigo-100 to-purple-100 text-indigo-700 rounded-full text-sm font-semibold">
-                      {generatedCaptions.length} Platforms
-                    </span>
-                  </div>
+                  Create engaging, platform-optimized captions in seconds with AI-powered analytics
+                </motion.p>
 
-                  <div className="space-y-4 max-h-[calc(100vh-200px)] overflow-y-auto pr-2">
-                    {generatedCaptions.map((caption, index) => {
-                      const platformMeta = PLATFORMS.find(p => p.value === caption.platform);
-                      const PlatformIcon = platformMeta?.icon;
-                      return (
-                        <motion.div
-                          key={caption.id}
-                          initial={{ opacity: 0, y: 20 }}
-                          animate={{ opacity: 1, y: 0 }}
-                          transition={{ delay: index * 0.1 }}
-                          className="border-2 border-gray-100 rounded-xl p-5 hover:border-indigo-200 transition-colors bg-gradient-to-br from-white to-gray-50"
-                        >
-                          <div className="flex justify-between items-center mb-3">
-                            <span className="px-3 py-1.5 bg-gradient-to-r from-indigo-500 to-purple-500 text-white rounded-full text-xs font-bold flex items-center gap-1">
-                              {PlatformIcon && <PlatformIcon className="w-3 h-3" />}
-                              {platformMeta?.label ?? caption.platform}
-                            </span>
-                            <span className="text-xs text-gray-500 font-medium">
-                              Variant {caption.variantNumber}
-                            </span>
-                          </div>
+                <div className="space-y-4">
+                  {[
+                    {
+                      icon: Sparkles,
+                      title: "AI-Powered Generation",
+                      desc: "Get 3 unique variants per platform, tailored to each platform's best practices",
+                      delay: 0.8
+                    },
+                    {
+                      icon: TrendingUp,
+                      title: "Smart Analytics",
+                      desc: "See engagement scores, virality predictions, and best posting times instantly",
+                      delay: 0.9
+                    },
+                    {
+                      icon: BarChart3,
+                      title: "Multi-Platform Support",
+                      desc: "Generate captions for Instagram, TikTok, YouTube, LinkedIn, and more - all at once",
+                      delay: 1.0
+                    },
+                    {
+                      icon: Clock,
+                      title: "Save Hours of Time",
+                      desc: "Stop struggling with writer's block. Get professional captions in under 30 seconds",
+                      delay: 1.1
+                    }
+                  ].map((item, index) => (
+                    <motion.div
+                      key={index}
+                      initial={{ x: -20, opacity: 0 }}
+                      animate={{ x: 0, opacity: 1 }}
+                      transition={{ delay: item.delay, duration: 0.4 }}
+                      whileHover={{ x: 5, transition: { duration: 0.2 } }}
+                      className="flex items-start gap-3"
+                    >
+                      <motion.div
+                        whileHover={{ scale: 1.1, rotate: 5 }}
+                        className="bg-white/20 backdrop-blur-sm rounded-lg p-2 mt-0.5"
+                      >
+                        <item.icon className="w-4 h-4" />
+                      </motion.div>
+                      <div>
+                        <h5 className="font-semibold mb-1">{item.title}</h5>
+                        <p className="text-sm text-indigo-100">
+                          {item.desc}
+                        </p>
+                      </div>
+                    </motion.div>
+                  ))}
+                </div>
+              </div>
+            </motion.div>
 
-                        <p className="text-gray-800 whitespace-pre-wrap mb-4 leading-relaxed">{caption.generatedCaption}</p>
+            {/* Quick Tips Card */}
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ delay: 0.6, duration: 0.4 }}
+              whileHover={{ scale: 1.02 }}
+              className="bg-white rounded-2xl shadow-lg p-6 border border-gray-100 hover:shadow-xl transition-shadow"
+            >
+              <motion.div
+                initial={{ y: -10, opacity: 0 }}
+                animate={{ y: 0, opacity: 1 }}
+                transition={{ delay: 1.2 }}
+                className="flex items-center gap-2 mb-4"
+              >
+                <motion.div
+                  animate={{ scale: [1, 1.1, 1] }}
+                  transition={{ duration: 2, repeat: Infinity, repeatDelay: 2 }}
+                >
+                  <MessageSquare className="w-5 h-5 text-indigo-600" />
+                </motion.div>
+                <h4 className="font-bold text-gray-900">Pro Tips</h4>
+              </motion.div>
+              <ul className="space-y-3 text-sm text-gray-700">
+                {[
+                  "Be specific in your content description for better results",
+                  "Select multiple platforms to save time on cross-posting",
+                  "Use the analytics to pick the best-performing variant",
+                  "Copy captions with one click and paste directly to your posts"
+                ].map((tip, index) => (
+                  <motion.li
+                    key={index}
+                    initial={{ x: -10, opacity: 0 }}
+                    animate={{ x: 0, opacity: 1 }}
+                    transition={{ delay: 1.3 + index * 0.1, duration: 0.3 }}
+                    whileHover={{ x: 5, transition: { duration: 0.2 } }}
+                    className="flex items-start gap-2 cursor-default"
+                  >
+                    <motion.span
+                      initial={{ scale: 0 }}
+                      animate={{ scale: 1 }}
+                      transition={{ delay: 1.3 + index * 0.1 + 0.1, type: "spring" }}
+                      className="text-indigo-600 mt-0.5 font-bold"
+                    >
+                      ✓
+                    </motion.span>
+                    <span>{tip}</span>
+                  </motion.li>
+                ))}
+              </ul>
+            </motion.div>
+          </motion.div>
+        </div>
+        ) : loading ? (
+          /* Loading State */
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="bg-white rounded-2xl shadow-lg p-8 border border-gray-100 flex flex-col items-center justify-center min-h-[400px]"
+          >
+            <motion.div
+              animate={{ rotate: 360 }}
+              transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
+            >
+              <Sparkles className="w-16 h-16 text-indigo-600" />
+            </motion.div>
+            <p className="mt-4 text-gray-600 font-medium">Creating amazing captions...</p>
+          </motion.div>
+        ) : (
+          /* Results View - Full Width */
+          <div>
+            {/* Header with Generate Another Button */}
+            <div className="flex justify-between items-center mb-6">
+              <div>
+                <h3 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
+                  <BarChart3 className="w-7 h-7 text-indigo-600" />
+                  Generated Captions
+                </h3>
+                <p className="text-sm text-gray-600 mt-1">
+                  {generatedCaptions.length} caption variants ready to use
+                </p>
+              </div>
+              <motion.button
+                onClick={() => setGeneratedCaptions([])}
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                className="px-6 py-3 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-xl font-semibold shadow-lg hover:shadow-xl transition-all flex items-center gap-2"
+              >
+                <Sparkles className="w-5 h-5" />
+                Generate Another
+              </motion.button>
+            </div>
 
-                        <div className="flex flex-wrap gap-2 mb-4">
-                          {caption.hashtags.map((tag, idx) => (
-                            <motion.span
-                              key={idx}
-                              initial={{ opacity: 0, scale: 0.8 }}
-                              animate={{ opacity: 1, scale: 1 }}
-                              transition={{ delay: index * 0.1 + idx * 0.05 }}
-                              className="text-indigo-600 text-sm font-medium bg-indigo-50 px-2 py-1 rounded-lg"
-                            >
-                              {tag.startsWith('#') ? tag : `#${tag}`}
-                            </motion.span>
-                          ))}
-                        </div>
+            {/* Group captions by platform */}
+            <div className="space-y-6">
+              {(() => {
+                // Group captions by platform
+                const captionsByPlatform = generatedCaptions.reduce((acc, caption) => {
+                  if (!acc[caption.platform]) {
+                    acc[caption.platform] = [];
+                  }
+                  acc[caption.platform].push(caption);
+                  return acc;
+                }, {} as Record<string, typeof generatedCaptions>);
 
-                        <CopyToClipboard
-                          text={`${caption.generatedCaption}\n\n${caption.hashtags.map(tag => tag.startsWith('#') ? tag : `#${tag}`).join(' ')}`}
-                          onCopy={() => {
-                            setCopiedId(caption.id);
-                            setTimeout(() => setCopiedId(null), 2000);
-                          }}
-                        >
-                          <motion.button
-                            whileHover={{ scale: 1.02 }}
-                            whileTap={{ scale: 0.98 }}
-                            className={`w-full py-3 rounded-xl font-semibold transition-all flex items-center justify-center gap-2 ${
-                              copiedId === caption.id
-                                ? 'bg-green-500 text-white'
-                                : 'bg-gradient-to-r from-green-500 to-emerald-500 text-white hover:shadow-lg'
-                            }`}
-                          >
-                            {copiedId === caption.id ? (
-                              <>
-                                <Check className="w-5 h-5" />
-                                Copied!
-                              </>
-                            ) : (
-                              <>
-                                <Copy className="w-5 h-5" />
-                                Copy Caption
-                              </>
-                            )}
-                          </motion.button>
-                        </CopyToClipboard>
+                return Object.entries(captionsByPlatform).map(([platform, captions]) => {
+                  const platformMeta = PLATFORMS.find(p => p.value === platform);
+                  const PlatformIcon = platformMeta?.icon;
 
-                        {/* Analytics */}
-                        {caption.analytics && (
+                  return (
+                    <motion.div
+                      key={platform}
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      className="bg-white rounded-2xl shadow-lg p-6 border border-gray-100"
+                    >
+                      {/* Platform Header */}
+                      <div className="flex items-center gap-3 mb-4 pb-4 border-b border-gray-100">
+                        {PlatformIcon && <PlatformIcon className="w-6 h-6 text-indigo-600" />}
+                        <h4 className="text-lg font-bold text-gray-900">{platformMeta?.label ?? platform}</h4>
+                        <span className="ml-auto px-3 py-1 bg-indigo-100 text-indigo-700 rounded-full text-xs font-semibold">
+                          {captions.length} Variants
+                        </span>
+                      </div>
+
+                      {/* Caption Variants Grid */}
+                      <div className="grid md:grid-cols-3 gap-4">
+                        {captions.map((caption) => (
                           <motion.div
-                            initial={{ opacity: 0, height: 0 }}
-                            animate={{ opacity: 1, height: 'auto' }}
-                            transition={{ delay: 0.3 }}
-                            className="border-t-2 border-gray-100 pt-5 mt-5"
+                            key={caption.id}
+                            initial={{ opacity: 0, y: 20 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            className="border-2 border-gray-100 rounded-xl p-4 hover:border-indigo-200 transition-colors bg-gradient-to-br from-white to-gray-50"
                           >
-                            <h4 className="font-bold text-sm mb-4 flex items-center gap-2 text-gray-900">
-                              <TrendingUp className="w-4 h-4 text-indigo-600" />
-                              Performance Analytics
-                            </h4>
-
-                            <div className="grid grid-cols-3 gap-3 mb-5">
-                              <motion.div
-                                whileHover={{ scale: 1.05 }}
-                                className="text-center p-3 bg-gradient-to-br from-indigo-50 to-indigo-100 rounded-xl"
-                              >
-                                <div className="text-2xl font-bold text-indigo-600">
-                                  {caption.analytics.engagementScore.toFixed(0)}
+                            {/* Variant Number and Engagement Score */}
+                            <div className="flex justify-between items-center mb-3">
+                              <span className="text-xs font-semibold text-gray-500">
+                                Variant {caption.variantNumber}
+                              </span>
+                              {caption.analytics && (
+                                <div className="flex items-center gap-1 bg-gradient-to-r from-indigo-50 to-purple-50 px-3 py-1 rounded-full">
+                                  <TrendingUp className="w-4 h-4 text-indigo-600" />
+                                  <span className="text-sm font-bold text-indigo-600">
+                                    {caption.analytics.engagementScore.toFixed(0)}
+                                  </span>
                                 </div>
-                                <div className="text-xs text-gray-700 font-medium mt-1">Engagement</div>
-                              </motion.div>
-                              <motion.div
-                                whileHover={{ scale: 1.05 }}
-                                className="text-center p-3 bg-gradient-to-br from-purple-50 to-purple-100 rounded-xl"
-                              >
-                                <div className="text-2xl font-bold text-purple-600">
-                                  {caption.analytics.viralityScore.toFixed(0)}
-                                </div>
-                                <div className="text-xs text-gray-700 font-medium mt-1">Virality</div>
-                              </motion.div>
-                              <motion.div
-                                whileHover={{ scale: 1.05 }}
-                                className="text-center p-3 bg-gradient-to-br from-green-50 to-green-100 rounded-xl"
-                              >
-                                <div className="text-sm font-bold text-green-600">
-                                  {caption.analytics.reachEstimate}
-                                </div>
-                                <div className="text-xs text-gray-700 font-medium mt-1">Est. Reach</div>
-                              </motion.div>
+                              )}
                             </div>
 
-                            {/* Score Bars */}
-                            <div className="space-y-3 mb-4">
-                              {[
-                                { label: 'Hashtags', score: caption.analytics.hashtagScore, icon: Hash },
-                                { label: 'Length', score: caption.analytics.lengthScore, icon: MessageSquare },
-                                { label: 'Keywords', score: caption.analytics.keywordScore, icon: Zap },
-                              ].map((item, idx) => (
-                                <div key={idx}>
-                                  <div className="flex justify-between items-center text-xs mb-1.5">
-                                    <span className="flex items-center gap-1 font-medium text-gray-700">
-                                      <item.icon className="w-3 h-3" />
-                                      {item.label}
-                                    </span>
-                                    <span className="font-bold text-indigo-600">{item.score.toFixed(0)}%</span>
-                                  </div>
-                                  <div className="w-full bg-gray-200 rounded-full h-2 overflow-hidden">
-                                    <motion.div
-                                      initial={{ width: 0 }}
-                                      animate={{ width: `${item.score}%` }}
-                                      transition={{ duration: 1, delay: idx * 0.1 }}
-                                      className="bg-gradient-to-r from-indigo-500 to-purple-500 h-2 rounded-full"
-                                    />
-                                  </div>
-                                </div>
+                            {/* Caption Text */}
+                            <p className="text-gray-800 whitespace-pre-wrap mb-4 leading-relaxed text-sm">
+                              {caption.generatedCaption}
+                            </p>
+
+                            {/* Hashtags */}
+                            <div className="flex flex-wrap gap-2 mb-4">
+                              {caption.hashtags.map((tag, idx) => (
+                                <span
+                                  key={idx}
+                                  className="text-indigo-600 text-xs font-medium bg-indigo-50 px-2 py-1 rounded-lg"
+                                >
+                                  {tag.startsWith('#') ? tag : `#${tag}`}
+                                </span>
                               ))}
                             </div>
 
-                            {/* Best Posting Times */}
-                            <div className="bg-blue-50 p-4 rounded-xl mb-3">
-                              <h5 className="font-semibold text-xs mb-2 flex items-center gap-1 text-blue-900">
-                                <Clock className="w-3 h-3" />
-                                Best Posting Times
-                              </h5>
-                              <div className="flex flex-wrap gap-2">
-                                {caption.analytics.bestPostingTime.map((time, idx) => (
-                                  <motion.span
-                                    key={idx}
-                                    initial={{ opacity: 0, scale: 0.8 }}
-                                    animate={{ opacity: 1, scale: 1 }}
-                                    transition={{ delay: idx * 0.05 }}
-                                    className="px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-xs font-semibold"
-                                  >
-                                    {time}
-                                  </motion.span>
-                                ))}
-                              </div>
-                            </div>
+                            {/* Copy Button */}
+                            <CopyToClipboard
+                              text={`${caption.generatedCaption}\n\n${caption.hashtags.map(tag => tag.startsWith('#') ? tag : `#${tag}`).join(' ')}`}
+                              onCopy={() => {
+                                setCopiedId(caption.id);
+                                setTimeout(() => setCopiedId(null), 2000);
+                              }}
+                            >
+                              <motion.button
+                                whileHover={{ scale: 1.02 }}
+                                whileTap={{ scale: 0.98 }}
+                                className={`w-full py-2 rounded-lg font-semibold transition-all flex items-center justify-center gap-2 text-sm ${
+                                  copiedId === caption.id
+                                    ? 'bg-green-500 text-white'
+                                    : 'bg-gradient-to-r from-green-500 to-emerald-500 text-white hover:shadow-lg'
+                                }`}
+                              >
+                                {copiedId === caption.id ? (
+                                  <>
+                                    <Check className="w-4 h-4" />
+                                    Copied!
+                                  </>
+                                ) : (
+                                  <>
+                                    <Copy className="w-4 h-4" />
+                                    Copy
+                                  </>
+                                )}
+                              </motion.button>
+                            </CopyToClipboard>
 
-                            {/* Improvement Tips */}
-                            {caption.analytics.improvementTips.length > 0 && (
-                              <div className="bg-amber-50 p-4 rounded-xl">
-                                <h5 className="font-semibold text-xs mb-2 text-amber-900">💡 Pro Tips</h5>
-                                <ul className="space-y-1.5 text-xs text-gray-700">
-                                  {caption.analytics.improvementTips.map((tip, idx) => (
-                                    <motion.li
-                                      key={idx}
-                                      initial={{ opacity: 0, x: -10 }}
-                                      animate={{ opacity: 1, x: 0 }}
-                                      transition={{ delay: idx * 0.05 }}
-                                      className="flex items-start gap-2"
+                            {/* Analytics - Collapsible */}
+                            {caption.analytics && (
+                              <div className="border-t border-gray-100 pt-4 mt-4">
+                                <button
+                                  onClick={() => setExpandedAnalytics(prev => ({
+                                    ...prev,
+                                    [caption.id]: !prev[caption.id]
+                                  }))}
+                                  className="w-full flex items-center justify-between text-xs font-bold text-gray-900 hover:text-indigo-600 transition-colors mb-3"
+                                >
+                                  <span className="flex items-center gap-1">
+                                    <BarChart3 className="w-3 h-3 text-indigo-600" />
+                                    Detailed Analytics
+                                  </span>
+                                  {expandedAnalytics[caption.id] ? (
+                                    <ChevronUp className="w-4 h-4" />
+                                  ) : (
+                                    <ChevronDown className="w-4 h-4" />
+                                  )}
+                                </button>
+
+                                <AnimatePresence>
+                                  {expandedAnalytics[caption.id] && (
+                                    <motion.div
+                                      initial={{ height: 0, opacity: 0 }}
+                                      animate={{ height: 'auto', opacity: 1 }}
+                                      exit={{ height: 0, opacity: 0 }}
+                                      transition={{ duration: 0.3 }}
+                                      className="overflow-hidden"
                                     >
-                                      <span className="text-amber-600 mt-0.5">•</span>
-                                      <span>{tip}</span>
-                                    </motion.li>
+
+                                <div className="grid grid-cols-3 gap-2 mb-3">
+                                  <div className="text-center p-2 bg-gradient-to-br from-indigo-50 to-indigo-100 rounded-lg">
+                                    <div className="text-lg font-bold text-indigo-600">
+                                      {caption.analytics.engagementScore.toFixed(0)}
+                                    </div>
+                                    <div className="text-[10px] text-gray-700 font-medium">Engagement</div>
+                                  </div>
+                                  <div className="text-center p-2 bg-gradient-to-br from-purple-50 to-purple-100 rounded-lg">
+                                    <div className="text-lg font-bold text-purple-600">
+                                      {caption.analytics.viralityScore.toFixed(0)}
+                                    </div>
+                                    <div className="text-[10px] text-gray-700 font-medium">Virality</div>
+                                  </div>
+                                  <div className="text-center p-2 bg-gradient-to-br from-green-50 to-green-100 rounded-lg">
+                                    <div className="text-xs font-bold text-green-600">
+                                      {caption.analytics.reachEstimate}
+                                    </div>
+                                    <div className="text-[10px] text-gray-700 font-medium">Reach</div>
+                                  </div>
+                                </div>
+
+                                {/* Score Bars */}
+                                <div className="space-y-2 mb-3">
+                                  {[
+                                    { label: 'Hashtags', score: caption.analytics.hashtagScore, icon: Hash },
+                                    { label: 'Length', score: caption.analytics.lengthScore, icon: MessageSquare },
+                                    { label: 'Keywords', score: caption.analytics.keywordScore, icon: Zap },
+                                  ].map((item, idx) => (
+                                    <div key={idx}>
+                                      <div className="flex justify-between items-center text-[10px] mb-1">
+                                        <span className="flex items-center gap-1 font-medium text-gray-700">
+                                          <item.icon className="w-3 h-3" />
+                                          {item.label}
+                                        </span>
+                                        <span className="font-bold text-indigo-600">{item.score.toFixed(0)}%</span>
+                                      </div>
+                                      <div className="w-full bg-gray-200 rounded-full h-1.5 overflow-hidden">
+                                        <motion.div
+                                          initial={{ width: 0 }}
+                                          animate={{ width: `${item.score}%` }}
+                                          transition={{ duration: 1, delay: idx * 0.1 }}
+                                          className="bg-gradient-to-r from-indigo-500 to-purple-500 h-1.5 rounded-full"
+                                        />
+                                      </div>
+                                    </div>
                                   ))}
-                                </ul>
+                                </div>
+
+                                {/* Best Posting Times */}
+                                <div className="bg-blue-50 p-2 rounded-lg mb-2">
+                                  <h6 className="font-semibold text-[10px] mb-1.5 flex items-center gap-1 text-blue-900">
+                                    <Clock className="w-3 h-3" />
+                                    Best Times
+                                  </h6>
+                                  <div className="flex flex-wrap gap-1">
+                                    {caption.analytics.bestPostingTime.map((time, idx) => (
+                                      <span
+                                        key={idx}
+                                        className="px-2 py-0.5 bg-blue-100 text-blue-800 rounded-full text-[10px] font-semibold"
+                                      >
+                                        {time}
+                                      </span>
+                                    ))}
+                                  </div>
+                                </div>
+
+                                {/* Improvement Tips */}
+                                {caption.analytics.improvementTips.length > 0 && (
+                                  <div className="bg-amber-50 p-2 rounded-lg">
+                                    <h6 className="font-semibold text-[10px] mb-1.5 text-amber-900">💡 Tips</h6>
+                                    <ul className="space-y-1 text-[10px] text-gray-700">
+                                      {caption.analytics.improvementTips.map((tip, idx) => (
+                                        <li key={idx} className="flex items-start gap-1">
+                                          <span className="text-amber-600 mt-0.5">•</span>
+                                          <span>{tip}</span>
+                                        </li>
+                                      ))}
+                                    </ul>
+                                  </div>
+                                )}
+                                    </motion.div>
+                                  )}
+                                </AnimatePresence>
                               </div>
                             )}
                           </motion.div>
-                        )}
-                      </motion.div>
-                    );
-                    })}
-                  </div>
-                </motion.div>
-              ) : (
-                <motion.div
-                  key="empty"
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  exit={{ opacity: 0 }}
-                  className="bg-white rounded-2xl shadow-lg p-8 border border-gray-100 flex flex-col items-center justify-center min-h-[400px] text-center"
-                >
-                  <Sparkles className="w-16 h-16 text-gray-300 mb-4" />
-                  <h3 className="text-xl font-semibold text-gray-700 mb-2">Ready to Create?</h3>
-                  <p className="text-gray-500">
-                    Fill in the form and generate your first caption!
-                  </p>
-                </motion.div>
-              )}
-            </AnimatePresence>
+                        ))}
+                      </div>
+                    </motion.div>
+                  );
+                });
+              })()}
+            </div>
           </div>
-        </div>
+        )}
       </main>
     </div>
   );
