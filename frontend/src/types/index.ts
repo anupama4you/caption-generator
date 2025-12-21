@@ -34,6 +34,8 @@ export interface Caption {
   platform: Platform;
   variantNumber: number; // 1, 2, or 3
   generatedCaption: string;
+  title?: string; // For YouTube (Shorts & Long)
+  description?: string; // For YouTube (Shorts & Long)
   hashtags: string[];
   hashtagReason?: string;
   storySlides?: string[];

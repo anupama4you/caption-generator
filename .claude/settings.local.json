@@ -15,7 +15,9 @@
       "Bash(lsof:*)",
       "Bash(xargs kill:*)",
       "Bash(npx prisma:*)",
-      "Bash(curl:*)"
+      "Bash(curl:*)",
+      "Bash(cat:*)",
+      "Bash(kill:*)"
     ]
   }
 }

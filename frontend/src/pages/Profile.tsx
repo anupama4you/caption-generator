@@ -1,10 +1,14 @@
 import { useState, useEffect, FormEvent } from 'react';
 import { Link } from 'react-router-dom';
+import { useSelector } from 'react-redux';
 import { motion } from 'framer-motion';
-import { Sparkles, Save, Settings, User as UserIcon, Zap, Hash } from 'lucide-react';
+import { Sparkles, Save, Settings, User as UserIcon, Zap, Hash, Crown, Loader2 } from 'lucide-react';
+import { RootState } from '../store/store';
 import api from '../services/api';
 
 export default function Profile() {
+  const { user } = useSelector((state: RootState) => state.auth);
+
   const [niche, setNiche] = useState('');
   const [brandVoice, setBrandVoice] = useState('');
   const [targetAudience, setTargetAudience] = useState('');
@@ -20,6 +24,8 @@ export default function Profile() {
 
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
+  const [cancelLoading, setCancelLoading] = useState(false);
+  const [showCancelConfirm, setShowCancelConfirm] = useState(false);
 
   useEffect(() => {
     fetchProfile();
@@ -43,6 +49,22 @@ export default function Profile() {
       }
     } catch (err) {
       console.error('Failed to fetch profile:', err);
+    }
+  };
+
+  const handleCancelSubscription = async () => {
+    setCancelLoading(true);
+
+    try {
+      await api.post('/subscription/cancel');
+      alert('Subscription cancelled successfully! Your plan has been downgraded to Free. Please refresh the page.');
+      setShowCancelConfirm(false);
+      window.location.reload();
+    } catch (err: any) {
+      console.error('Cancel subscription error:', err);
+      alert(err.response?.data?.error || 'Failed to cancel subscription. Please try again.');
+    } finally {
+      setCancelLoading(false);
     }
   };
 
@@ -83,18 +105,20 @@ export default function Profile() {
       >
         <div className="container mx-auto px-4 sm:px-6 py-4">
           <div className="flex justify-between items-center">
-            <div className="flex items-center gap-2">
-              <Sparkles className="w-7 h-7 text-indigo-600" />
-              <h1 className="text-xl sm:text-2xl font-bold bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">
-                Caption Generator
-              </h1>
-            </div>
+            <Link to="/">
+              <div className="flex items-center gap-2">
+                <Sparkles className="w-7 h-7 text-indigo-600" />
+                <h1 className="text-xl sm:text-2xl font-bold bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">
+                  captions for you
+                </h1>
+              </div>
+            </Link>
             <div className="flex items-center space-x-4">
               <Link
-                to="/dashboard"
+                to="/"
                 className="text-gray-700 hover:text-indigo-600 font-medium transition-colors"
               >
-                Dashboard
+                Home
               </Link>
               <Link
                 to="/history"
@@ -129,6 +153,125 @@ export default function Profile() {
             >
               <Zap className="w-5 h-5" />
               <span className="font-semibold">Profile updated successfully!</span>
+            </motion.div>
+          )}
+
+          {/* Subscription Card */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.05 }}
+            className={`rounded-2xl shadow-lg p-6 border-2 mb-6 ${
+              user?.subscriptionTier === 'PREMIUM'
+                ? 'bg-gradient-to-br from-indigo-50 to-purple-50 border-indigo-300'
+                : 'bg-white border-gray-100'
+            }`}
+          >
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+              <div>
+                <div className="flex items-center gap-2 mb-2">
+                  {user?.subscriptionTier === 'PREMIUM' ? (
+                    <Crown className="w-6 h-6 text-indigo-600" />
+                  ) : (
+                    <Zap className="w-6 h-6 text-gray-600" />
+                  )}
+                  <h3 className="text-xl font-bold text-gray-900">
+                    {user?.subscriptionTier === 'PREMIUM' ? 'Premium Plan' : 'Free Plan'}
+                  </h3>
+                </div>
+                <p className="text-gray-600 text-sm">
+                  {user?.subscriptionTier === 'PREMIUM'
+                    ? '100 caption generations per month • Unlimited platforms'
+                    : '10 caption generations per month • Up to 4 platforms'}
+                </p>
+              </div>
+              <div className="flex flex-col sm:flex-row gap-2">
+                {user?.subscriptionTier === 'FREE' && (
+                  <Link
+                    to="/pricing"
+                    className="flex items-center justify-center gap-2 px-6 py-3 bg-gradient-to-r from-indigo-600 to-purple-600 text-white font-semibold rounded-lg hover:shadow-lg transition-all"
+                  >
+                    <Crown className="w-5 h-5" />
+                    Upgrade to Premium
+                    <Sparkles className="w-4 h-4" />
+                  </Link>
+                )}
+                {user?.subscriptionTier === 'PREMIUM' && (
+                  <>
+                    <Link
+                      to="/pricing"
+                      className="px-4 py-2 text-indigo-600 hover:text-indigo-700 font-medium flex items-center justify-center gap-1 border border-indigo-300 rounded-lg hover:bg-indigo-100 transition-all"
+                    >
+                      View Plans
+                      <Sparkles className="w-4 h-4" />
+                    </Link>
+                    <button
+                      onClick={() => setShowCancelConfirm(true)}
+                      className="px-4 py-2 text-red-600 hover:text-red-700 font-medium border border-red-300 rounded-lg hover:bg-red-50 transition-all"
+                    >
+                      Cancel Subscription
+                    </button>
+                  </>
+                )}
+              </div>
+            </div>
+          </motion.div>
+
+          {/* Cancel Confirmation Modal */}
+          {showCancelConfirm && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
+              onClick={() => setShowCancelConfirm(false)}
+            >
+              <motion.div
+                initial={{ scale: 0.9, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                onClick={(e) => e.stopPropagation()}
+                className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6"
+              >
+                <h3 className="text-2xl font-bold text-gray-900 mb-4">Cancel Premium?</h3>
+                <p className="text-gray-600 mb-6">
+                  Are you sure you want to cancel your Premium subscription? You'll be downgraded to the Free plan:
+                </p>
+                <div className="bg-gray-50 rounded-lg p-4 mb-6 space-y-2">
+                  <div className="flex items-center gap-2 text-sm text-gray-700">
+                    <span className="text-red-500">✗</span>
+                    Monthly limit reduced to 10 generations
+                  </div>
+                  <div className="flex items-center gap-2 text-sm text-gray-700">
+                    <span className="text-red-500">✗</span>
+                    Platform selection limited to 4
+                  </div>
+                  <div className="flex items-center gap-2 text-sm text-gray-700">
+                    <span className="text-red-500">✗</span>
+                    No priority support
+                  </div>
+                </div>
+                <div className="flex gap-3">
+                  <button
+                    onClick={() => setShowCancelConfirm(false)}
+                    className="flex-1 px-4 py-3 bg-gray-200 text-gray-700 rounded-lg font-semibold hover:bg-gray-300 transition-all"
+                  >
+                    Keep Premium
+                  </button>
+                  <button
+                    onClick={handleCancelSubscription}
+                    disabled={cancelLoading}
+                    className="flex-1 px-4 py-3 bg-red-600 text-white rounded-lg font-semibold hover:bg-red-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                  >
+                    {cancelLoading ? (
+                      <>
+                        <Loader2 className="w-5 h-5 animate-spin" />
+                        Cancelling...
+                      </>
+                    ) : (
+                      'Yes, Cancel'
+                    )}
+                  </button>
+                </div>
+              </motion.div>
             </motion.div>
           )}
 

@@ -10,6 +10,7 @@ import Register from './pages/Register';
 import Dashboard from './pages/Dashboard';
 import Profile from './pages/Profile';
 import History from './pages/History';
+import Pricing from './pages/Pricing';
 
 function App() {
   const dispatch = useDispatch();
@@ -43,19 +44,16 @@ function App() {
 
   return (
     <Routes>
-      <Route path="/" element={<Landing />} />
+      <Route path="/" element={isAuthenticated ? <Dashboard /> : <Landing />} />
       <Route
         path="/login"
-        element={isAuthenticated ? <Navigate to="/dashboard" /> : <Login />}
+        element={isAuthenticated ? <Navigate to="/" /> : <Login />}
       />
       <Route
         path="/register"
-        element={isAuthenticated ? <Navigate to="/dashboard" /> : <Register />}
+        element={isAuthenticated ? <Navigate to="/" /> : <Register />}
       />
-      <Route
-        path="/dashboard"
-        element={isAuthenticated ? <Dashboard /> : <Navigate to="/login" />}
-      />
+      <Route path="/dashboard" element={<Navigate to="/" replace />} />
       <Route
         path="/profile"
         element={isAuthenticated ? <Profile /> : <Navigate to="/login" />}
@@ -63,6 +61,10 @@ function App() {
       <Route
         path="/history"
         element={isAuthenticated ? <History /> : <Navigate to="/login" />}
+      />
+      <Route
+        path="/pricing"
+        element={isAuthenticated ? <Pricing /> : <Navigate to="/login" />}
       />
     </Routes>
   );

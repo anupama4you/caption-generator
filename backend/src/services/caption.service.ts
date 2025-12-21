@@ -85,6 +85,8 @@ export class CaptionService {
 
         return {
           caption: v.caption,
+          title: v.title,
+          description: v.description,
           hashtags: allHashtags,
           hashtagReason: v.hashtag_explanation,
           storySlides: v.story_slides,
@@ -119,6 +121,7 @@ You do not include markdown or extra text.`;
   private getDeveloperPrompt(platform: Platform, format: ContentFormat): string {
     const isStory = format === 'story';
     const needsHashtags = this.platformNeedsHashtags(platform, format);
+    const isYouTube = platform === 'youtube_shorts' || platform === 'youtube_long';
 
     return `Generate 3 caption variants strictly following the JSON schema below.
 
@@ -130,14 +133,20 @@ Rules:
 - If hashtags are not recommended for the platform, return an empty array and explain why in \`hashtag_explanation\`.
 - Platform tone rules:
   - TikTok / Instagram Reels: casual, hook-driven
-  - YouTube Shorts: concise, curiosity-based
-  - YouTube Long: informative, keyword-rich
+  - YouTube Shorts: concise, curiosity-based (Title: max 100 chars, Description: 1-2 paragraphs)
+  - YouTube Long: informative, keyword-rich (Title: max 100 chars, Description: detailed with timestamps if relevant)
   - Instagram Feed: expressive, balanced
   - Facebook: conversational, community-focused
   - LinkedIn: professional, reflective, no emojis unless requested
   - X (Twitter): short, sharp, conversational
   - Pinterest: descriptive, keyword-rich, actionable
   - Snapchat: ultra-casual, immediate
+
+${isYouTube ? `YouTube-specific rules:
+- Generate a compelling TITLE (max 100 characters) that's click-worthy but not clickbait
+- Generate a detailed DESCRIPTION (2-5 sentences for Shorts, 2-3 paragraphs for Long videos)
+- The 'caption' field will be a combination of title and description for display purposes
+- Include relevant keywords in both title and description for SEO` : ''}
 
 Story rules:
 - ${isStory ? 'Story overlay text: max 8 words per slide' : 'Not a story format'}
@@ -151,7 +160,7 @@ Return ONLY valid JSON matching this schema:
 {
   "variants": [
     {
-      "caption": "string",
+      "caption": "string"${isYouTube ? ',\n      "title": "string", // Required for YouTube\n      "description": "string" // Required for YouTube' : ''},
       "hashtags": ["string"] ${!needsHashtags ? '// empty array if not recommended' : ''},
       "hashtag_explanation": "string" ${!needsHashtags ? '// required if hashtags empty' : '// optional'},
       "story_slides": ["string"] ${isStory ? '// required for stories, 3-5 slides' : '// omit for non-story'}

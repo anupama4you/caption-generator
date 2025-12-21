@@ -7,6 +7,9 @@ import { errorHandler } from './middleware/errorHandler.middleware';
 import authRoutes from './routes/auth.routes';
 import captionRoutes from './routes/caption.routes';
 import profileRoutes from './routes/profile.routes';
+import subscriptionRoutes from './routes/subscription.routes';
+import paymentRoutes from './routes/payment.routes';
+import webhookRoutes from './routes/webhook.routes';
 
 const app = express();
 
@@ -18,6 +21,9 @@ app.use(
     credentials: true,
   })
 );
+
+// Webhook route with raw body (must be before body parser)
+app.use('/api/webhook', express.raw({ type: 'application/json' }), webhookRoutes);
 
 // Rate limiting
 const limiter = rateLimit({
@@ -40,6 +46,8 @@ app.get('/health', (_req, res) => {
 app.use('/api/auth', authRoutes);
 app.use('/api/captions', captionRoutes);
 app.use('/api/profile', profileRoutes);
+app.use('/api/subscription', subscriptionRoutes);
+app.use('/api/payment', paymentRoutes);
 
 // 404 handler
 app.use((_req, res) => {

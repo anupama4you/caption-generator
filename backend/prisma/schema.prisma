@@ -45,9 +45,11 @@ model User {
   updatedAt DateTime @updatedAt
 
   // Subscription & Usage Tracking
-  subscriptionTier  SubscriptionTier @default(FREE)
-  subscriptionStart DateTime?
-  subscriptionEnd   DateTime?
+  subscriptionTier     SubscriptionTier @default(FREE)
+  subscriptionStart    DateTime?
+  subscriptionEnd      DateTime?
+  stripeCustomerId     String?          @unique
+  stripeSubscriptionId String?          @unique
 
   // Relations
   profile         UserProfile?
@@ -141,6 +143,8 @@ model Caption {
 
   // Generated Content
   generatedCaption String   @db.Text
+  title            String? // For YouTube (Shorts & Long)
+  description      String?  @db.Text // For YouTube (Shorts & Long)
   hashtags         String[] // Empty for stories and certain platforms
   hashtagReason    String? // Why hashtags not recommended (if empty)
 

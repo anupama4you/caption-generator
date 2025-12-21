@@ -5,7 +5,9 @@ export default function Landing() {
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
       <nav className="container mx-auto px-6 py-4">
         <div className="flex justify-between items-center">
-          <h1 className="text-2xl font-bold text-indigo-600">Caption Generator</h1>
+          <Link to="/">
+            <h1 className="text-2xl font-bold text-indigo-600">captions for you</h1>
+          </Link>
           <div className="space-x-4">
             <Link to="/login" className="text-gray-700 hover:text-indigo-600">
               Login

@@ -12,7 +12,12 @@
     "prisma:studio": "prisma studio",
     "prisma:seed": "ts-node prisma/seed.ts"
   },
-  "keywords": ["caption", "social-media", "ai", "openai"],
+  "keywords": [
+    "caption",
+    "social-media",
+    "ai",
+    "openai"
+  ],
   "author": "",
   "license": "MIT",
   "prisma": {
@@ -30,6 +35,7 @@
     "jsonwebtoken": "^9.0.2",
     "node-cron": "^3.0.3",
     "openai": "^4.77.3",
+    "stripe": "^20.1.0",
     "zod": "^3.24.1"
   },
   "devDependencies": {

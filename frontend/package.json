@@ -11,6 +11,7 @@
   },
   "dependencies": {
     "@reduxjs/toolkit": "^2.4.0",
+    "@stripe/stripe-js": "^8.6.0",
     "axios": "^1.7.9",
     "framer-motion": "^12.23.26",
     "lucide-react": "^0.561.0",
@@ -18,7 +19,8 @@
     "react-copy-to-clipboard": "^5.1.0",
     "react-dom": "^18.3.1",
     "react-redux": "^9.2.0",
-    "react-router-dom": "^7.1.1"
+    "react-router-dom": "^7.1.1",
+    "react-social-icons": "^6.25.0"
   },
   "devDependencies": {
     "@types/react": "^18.3.18",

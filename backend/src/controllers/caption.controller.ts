@@ -86,6 +86,8 @@ export class CaptionController {
               platform: platformResult.platform,
               variantNumber: i + 1,
               generatedCaption: variant.caption,
+              title: variant.title || null,
+              description: variant.description || null,
               hashtags: variant.hashtags || [],
               hashtagReason: variant.hashtagReason || null,
               storySlides: variant.storySlides || [],

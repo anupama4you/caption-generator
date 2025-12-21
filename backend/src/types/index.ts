@@ -54,6 +54,8 @@ export interface CaptionGenerationParams {
 
 export interface CaptionVariant {
   caption: string;
+  title?: string; // For YouTube (Shorts & Long)
+  description?: string; // For YouTube (Shorts & Long)
   hashtags: string[];
   hashtagReason?: string; // Why hashtags not recommended
   storySlides?: string[]; // For story format
@@ -89,6 +91,8 @@ export interface PredictedMetrics {
 export interface OpenAICaptionResponse {
   variants: {
     caption: string;
+    title?: string; // For YouTube (Shorts & Long)
+    description?: string; // For YouTube (Shorts & Long)
     hashtags?: string[];
     hashtag_explanation?: string;
     story_slides?: string[];
