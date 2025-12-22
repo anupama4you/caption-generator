@@ -60,8 +60,12 @@ export class PaymentController {
       }
 
       const userId = session.client_reference_id || session.metadata?.userId;
-      const subscriptionId = session.subscription as string;
-      const customerId = session.customer as string;
+      const subscriptionId = typeof session.subscription === 'string'
+        ? session.subscription
+        : session.subscription?.id;
+      const customerId = typeof session.customer === 'string'
+        ? session.customer
+        : session.customer?.id;
 
       if (!userId || !subscriptionId) {
         return res.status(400).json({ error: 'Missing user or subscription data' });
@@ -78,8 +82,8 @@ export class PaymentController {
           subscriptionTier: 'PREMIUM',
           subscriptionStart: now,
           subscriptionEnd,
-          stripeCustomerId: customerId,
-          stripeSubscriptionId: subscriptionId,
+          stripeCustomerId: customerId || null,
+          stripeSubscriptionId: subscriptionId || null,
         },
       });
 

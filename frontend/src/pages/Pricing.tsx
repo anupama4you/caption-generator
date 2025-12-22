@@ -1,11 +1,12 @@
 import { useState, useEffect } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
-import { useSelector } from 'react-redux';
+import { useSelector, useDispatch } from 'react-redux';
 import { motion } from 'framer-motion';
 import {
   Check, Sparkles, Zap, Crown, ArrowLeft, Loader2
 } from 'lucide-react';
 import { RootState } from '../store/store';
+import { setUser } from '../store/authSlice';
 import api from '../services/api';
 
 const PLANS = [
@@ -53,6 +54,7 @@ const PLANS = [
 ];
 
 export default function Pricing() {
+  const dispatch = useDispatch();
   const { user } = useSelector((state: RootState) => state.auth);
   const [searchParams] = useSearchParams();
   const [loading, setLoading] = useState(false);
@@ -67,17 +69,42 @@ export default function Pricing() {
   useEffect(() => {
     const success = searchParams.get('success');
     const canceled = searchParams.get('canceled');
+    const sessionId = searchParams.get('session_id');
 
-    if (success === 'true') {
-      setSuccessMessage('Payment successful! Your Premium subscription is now active. Please refresh the page to see updates.');
-      // Refresh after showing message
-      setTimeout(() => {
-        window.location.href = '/pricing';
-      }, 3000);
+    if (success === 'true' && sessionId) {
+      // Verify the checkout session and upgrade the user
+      verifyCheckout(sessionId);
     } else if (canceled === 'true') {
       setError('Payment was canceled. You can try again anytime.');
     }
   }, [searchParams]);
+
+  const verifyCheckout = async (sessionId: string) => {
+    setLoading(true);
+    try {
+      const response = await api.post('/payment/verify-checkout-session', { sessionId });
+
+      if (response.data.success) {
+        setSuccessMessage('Payment successful! Your Premium subscription is now active.');
+
+        // Fetch updated user data
+        const userResponse = await api.get('/auth/me');
+        dispatch(setUser(userResponse.data));
+
+        // Clear the session_id from URL after 2 seconds
+        setTimeout(() => {
+          window.history.replaceState({}, '', '/pricing');
+        }, 2000);
+      } else {
+        setError('Failed to verify payment. Please contact support.');
+      }
+    } catch (err: any) {
+      console.error('Verification error:', err);
+      setError(err.response?.data?.error || 'Failed to verify payment. Please contact support.');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleUpgrade = async (tier: string) => {
     if (tier === currentTier) return;

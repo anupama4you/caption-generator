@@ -17,6 +17,10 @@ router.post('/create-checkout-session', (req, res) =>
 router.post('/verify-session', (req, res) =>
   paymentController.verifyCheckoutSession(req, res)
 );
+// POST /api/payment/verify-checkout-session - Alias for verify-session
+router.post('/verify-checkout-session', (req, res) =>
+  paymentController.verifyCheckoutSession(req, res)
+);
 // GET /api/payment/verify-session?session_id=... - convenience for success page redirects
 router.get('/verify-session', (req, res) =>
   paymentController.verifyCheckoutSession(req as any, res)
