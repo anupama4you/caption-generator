@@ -3,18 +3,33 @@ import { Link, useSearchParams } from 'react-router-dom';
 import { useSelector, useDispatch } from 'react-redux';
 import { motion } from 'framer-motion';
 import {
-  Check, Sparkles, Zap, Crown, ArrowLeft, Loader2
+  Check, Zap, Crown, ArrowLeft, Loader2
 } from 'lucide-react';
 import { RootState } from '../store/store';
 import { setUser } from '../store/authSlice';
 import api from '../services/api';
+import Navbar from '../components/Navbar';
 
-const PLANS = [
+interface PlanType {
+  name: string;
+  tier: 'FREE' | 'PREMIUM';
+  price: number;
+  period: string;
+  currency?: string;
+  description: string;
+  features: string[];
+  limitations: string[];
+  buttonText: string;
+  highlighted: boolean;
+}
+
+const DEFAULT_PLANS: PlanType[] = [
   {
     name: 'Free',
     tier: 'FREE',
     price: 0,
     period: 'forever',
+    currency: 'USD',
     description: 'Perfect for trying out our caption generator',
     features: [
       '10 caption generations per month',
@@ -36,6 +51,7 @@ const PLANS = [
     tier: 'PREMIUM',
     price: 9.99,
     period: 'month',
+    currency: 'USD',
     description: 'For serious content creators and businesses',
     features: [
       '100 caption generations per month',
@@ -62,8 +78,47 @@ export default function Pricing() {
   const [showCancelConfirm, setShowCancelConfirm] = useState(false);
   const [cancelLoading, setCancelLoading] = useState(false);
   const [successMessage, setSuccessMessage] = useState('');
+  const [plans, setPlans] = useState<PlanType[]>(DEFAULT_PLANS);
+  const [pricingLoading, setPricingLoading] = useState(true);
 
   const currentTier = user?.subscriptionTier || 'FREE';
+
+  // Fetch pricing from Stripe
+  useEffect(() => {
+    const fetchPricing = async () => {
+      try {
+        setPricingLoading(true);
+        const response = await api.get('/payment/pricing');
+
+        if (response.data.success) {
+          const { premium, free } = response.data.pricing;
+
+          // Update plans with actual Stripe pricing
+          setPlans([
+            {
+              ...DEFAULT_PLANS[0],
+              price: free.amount,
+              currency: free.currency,
+            },
+            {
+              ...DEFAULT_PLANS[1],
+              price: premium.amount,
+              period: premium.interval,
+              currency: premium.currency,
+              name: premium.name,
+            },
+          ]);
+        }
+      } catch (err) {
+        console.error('Failed to fetch pricing:', err);
+        // Keep default plans if fetch fails
+      } finally {
+        setPricingLoading(false);
+      }
+    };
+
+    fetchPricing();
+  }, []);
 
   // Check for success/canceled query params from Stripe redirect
   useEffect(() => {
@@ -150,24 +205,7 @@ export default function Pricing() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-purple-50">
-      {/* Header */}
-      <header className="bg-white shadow-sm border-b border-gray-100">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-          <div className="flex items-center justify-between">
-            <Link
-              to="/"
-              className="flex items-center gap-2 text-gray-600 hover:text-indigo-600 transition-colors"
-            >
-              <ArrowLeft className="w-5 h-5" />
-              <span className="font-medium">Back Home</span>
-            </Link>
-            <div className="flex items-center gap-2">
-              <Sparkles className="w-6 h-6 text-indigo-600" />
-              <h1 className="text-2xl font-bold text-gray-900">captions for you</h1>
-            </div>
-          </div>
-        </div>
-      </header>
+      <Navbar />
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
         {/* Page Title */}
@@ -236,8 +274,13 @@ export default function Pricing() {
         )}
 
         {/* Pricing Cards */}
-        <div className="grid md:grid-cols-2 gap-8 max-w-5xl mx-auto">
-          {PLANS.map((plan, index) => {
+        {pricingLoading ? (
+          <div className="flex justify-center items-center py-20">
+            <Loader2 className="w-12 h-12 animate-spin text-indigo-600" />
+          </div>
+        ) : (
+          <div className="grid md:grid-cols-2 gap-8 max-w-5xl mx-auto">
+            {plans.map((plan, index) => {
             const isCurrentPlan = plan.tier === currentTier;
             const canUpgrade = plan.tier === 'PREMIUM' && currentTier === 'FREE';
 
@@ -276,7 +319,7 @@ export default function Pricing() {
                     <p className="text-gray-600 text-sm mb-4">{plan.description}</p>
                     <div className="flex items-baseline gap-2">
                       <span className="text-5xl font-bold text-gray-900">
-                        ${plan.price}
+                        {plan.currency === 'USD' ? '$' : plan.currency + ' '}{plan.price.toFixed(2)}
                       </span>
                       <span className="text-gray-600">/ {plan.period}</span>
                     </div>
@@ -339,7 +382,8 @@ export default function Pricing() {
               </motion.div>
             );
           })}
-        </div>
+          </div>
+        )}
 
         {/* FAQ Section */}
         <motion.div

@@ -105,6 +105,42 @@ export class StripeService {
       expand: ['subscription', 'customer'],
     });
   }
+
+  /**
+   * Get Premium price details from Stripe
+   */
+  async getPremiumPrice(): Promise<{
+    amount: number;
+    currency: string;
+    interval: string;
+    productName: string;
+  }> {
+    try {
+      // Retrieve the price object
+      const price = await stripe.prices.retrieve(config.stripePriceId, {
+        expand: ['product'],
+      });
+
+      // Extract product details
+      const product = price.product as Stripe.Product;
+
+      return {
+        amount: (price.unit_amount || 0) / 100, // Convert cents to dollars
+        currency: price.currency.toUpperCase(),
+        interval: price.recurring?.interval || 'month',
+        productName: product.name || 'Premium',
+      };
+    } catch (error) {
+      console.error('Error retrieving price:', error);
+      // Return default values if Stripe call fails
+      return {
+        amount: 9.99,
+        currency: 'USD',
+        interval: 'month',
+        productName: 'Premium',
+      };
+    }
+  }
 }
 
 export const stripeService = new StripeService();

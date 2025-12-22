@@ -3,15 +3,22 @@ import { Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   ArrowLeft, Calendar, Sparkles, ChevronRight, Trash2,
-  Heart, Clock, Video,
+  Heart, Clock, Video, Layers,
   Copy, Check, TrendingUp, Hash, MessageSquare, Zap,
   Instagram, Facebook, Youtube, Linkedin, Twitter, Ghost, Clapperboard,
   ChevronDown, ChevronUp, BarChart3, ChevronLeft
 } from 'lucide-react';
 import { CopyToClipboard } from 'react-copy-to-clipboard';
-import { SocialIcon } from 'react-social-icons';
 import api from '../services/api';
 import { CaptionAttempt, ContentType, Platform } from '../types';
+import Navbar from '../components/Navbar';
+import facebookLogo from '../assets/images/facebook.png';
+import instagramLogo from '../assets/images/instagram.png';
+import tiktokLogo from '../assets/images/tiktok.png';
+import youtubeLogo from '../assets/images/youtube.png';
+import snapchatLogo from '../assets/images/snapchat.png';
+import linkedinLogo from '../assets/images/linkedin.png';
+import twitterLogo from '../assets/images/twitter.png';
 
 const contentArt = (type: ContentType) => {
   const baseClass = 'w-14 h-14 rounded-2xl shadow-[0_6px_18px_rgba(0,0,0,0.08)] ring-1 ring-black/5';
@@ -130,36 +137,33 @@ export default function History() {
   // Platform logo tiles
   const platformArt = (platform: Platform) => {
     const baseClass =
-      'w-14 h-14 rounded-2xl bg-white flex items-center justify-center shadow-[0_6px_18px_rgba(0,0,0,0.08)] ring-1 ring-black/5';
+      'w-14 h-14 rounded-2xl bg-white flex items-center justify-center shadow-[0_6px_18px_rgba(0,0,0,0.08)] ring-1 ring-black/5 overflow-hidden';
 
-    const platformMap: Record<
-      Platform,
-      { url: string; bgColor?: string; fgColor?: string }
-    > = {
-      instagram: { url: 'https://www.instagram.com' },
-      tiktok: { url: 'https://www.tiktok.com', bgColor: '#000', fgColor: '#fff' },
-      youtube_shorts: { url: 'https://www.youtube.com', bgColor: '#ff0000', fgColor: '#fff' },
-      youtube_long: { url: 'https://www.youtube.com', bgColor: '#ff0000', fgColor: '#fff' },
-      facebook: { url: 'https://www.facebook.com', bgColor: '#1877f2', fgColor: '#fff' },
-      linkedin: { url: 'https://www.linkedin.com', bgColor: '#0a66c2', fgColor: '#fff' },
-      x: { url: 'https://twitter.com', bgColor: '#0f172a', fgColor: '#fff' },
-      pinterest: { url: 'https://www.pinterest.com', bgColor: '#e60023', fgColor: '#fff' },
-      snapchat: { url: 'https://www.snapchat.com', bgColor: '#fffc00', fgColor: '#000' },
-      all: { url: 'https://www.google.com', bgColor: '#4f46e5', fgColor: '#fff' },
+    const imageMap: Partial<Record<Platform, string>> = {
+      instagram: instagramLogo,
+      tiktok: tiktokLogo,
+      youtube_shorts: youtubeLogo,
+      youtube_long: youtubeLogo,
+      facebook: facebookLogo,
+      linkedin: linkedinLogo,
+      x: twitterLogo,
+      snapchat: snapchatLogo,
     };
 
-    const iconProps = platformMap[platform] || platformMap.all;
+    const imgSrc = imageMap[platform];
 
+    if (imgSrc) {
+      return (
+        <div className={baseClass}>
+          <img src={imgSrc} alt={platform} className="w-10 h-10 object-contain" />
+        </div>
+      );
+    }
+
+    const FallbackIcon = platform === 'pinterest' ? Layers : Sparkles;
     return (
-      <div className={baseClass}>
-        <SocialIcon
-          url={iconProps.url}
-          bgColor={iconProps.bgColor}
-          fgColor={iconProps.fgColor}
-          style={{ height: 44, width: 44 }}
-          target="_blank"
-          rel="noreferrer"
-        />
+      <div className={`${baseClass} bg-gradient-to-br from-indigo-600 to-purple-600`}>
+        <FallbackIcon className="w-8 h-8 text-white" />
       </div>
     );
   };
@@ -910,28 +914,18 @@ export default function History() {
   // List view
   return (
     <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-purple-50">
-      <nav className="bg-white/80 backdrop-blur-lg shadow-sm border-b border-gray-200 sticky top-0 z-50">
-        <div className="container mx-auto px-4 sm:px-6 py-4">
-          <div className="flex justify-between items-center">
-            <div className="flex items-center gap-2">
-              <Clock className="w-6 h-6 text-indigo-600" />
-              <h1 className="text-xl sm:text-2xl font-bold bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">
-                Generation History
-              </h1>
-            </div>
-            <div className="flex items-center space-x-4">
-              <Link
-                to="/"
-                className="text-gray-700 hover:text-indigo-600 font-medium"
-              >
-                Home
-              </Link>
-            </div>
-          </div>
-        </div>
-      </nav>
+      <Navbar />
 
       <main className="container mx-auto px-4 sm:px-6 py-8">
+        {/* Page Header */}
+        <div className="flex items-center gap-2 mb-6">
+          <Clock className="w-6 h-6 text-indigo-600" />
+          <h1 className="text-xl sm:text-2xl font-bold bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">
+            Generation History
+          </h1>
+        </div>
+
+
         {loading ? (
           <div className="text-center py-12">
             <motion.div

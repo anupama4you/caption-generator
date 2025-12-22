@@ -5,6 +5,7 @@ import { motion } from 'framer-motion';
 import { Sparkles, Save, Settings, User as UserIcon, Zap, Hash, Crown, Loader2 } from 'lucide-react';
 import { RootState } from '../store/store';
 import api from '../services/api';
+import Navbar from '../components/Navbar';
 
 export default function Profile() {
   const { user } = useSelector((state: RootState) => state.auth);
@@ -98,38 +99,7 @@ export default function Profile() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-purple-50">
-      <motion.nav
-        initial={{ y: -20, opacity: 0 }}
-        animate={{ y: 0, opacity: 1 }}
-        className="bg-white/80 backdrop-blur-lg shadow-sm border-b border-gray-200 sticky top-0 z-50"
-      >
-        <div className="container mx-auto px-4 sm:px-6 py-4">
-          <div className="flex justify-between items-center">
-            <Link to="/">
-              <div className="flex items-center gap-2">
-                <Sparkles className="w-7 h-7 text-indigo-600" />
-                <h1 className="text-xl sm:text-2xl font-bold bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">
-                  captions for you
-                </h1>
-              </div>
-            </Link>
-            <div className="flex items-center space-x-4">
-              <Link
-                to="/"
-                className="text-gray-700 hover:text-indigo-600 font-medium transition-colors"
-              >
-                Home
-              </Link>
-              <Link
-                to="/history"
-                className="text-gray-700 hover:text-indigo-600 font-medium transition-colors"
-              >
-                History
-              </Link>
-            </div>
-          </div>
-        </div>
-      </motion.nav>
+      <Navbar />
 
       <main className="container mx-auto px-4 sm:px-6 py-8">
         <div className="max-w-4xl mx-auto">

@@ -120,4 +120,34 @@ export class PaymentController {
       return res.status(500).json({ error: 'Failed to verify checkout session' });
     }
   }
+
+  /**
+   * Get Premium pricing from Stripe
+   */
+  async getPricing(_req: AuthRequest, res: Response): Promise<Response> {
+    try {
+      const pricing = await stripeService.getPremiumPrice();
+
+      return res.status(200).json({
+        success: true,
+        pricing: {
+          premium: {
+            amount: pricing.amount,
+            currency: pricing.currency,
+            interval: pricing.interval,
+            name: pricing.productName,
+          },
+          free: {
+            amount: 0,
+            currency: pricing.currency,
+            interval: 'forever',
+            name: 'Free',
+          },
+        },
+      });
+    } catch (error) {
+      console.error('Get pricing error:', error);
+      return res.status(500).json({ error: 'Failed to get pricing' });
+    }
+  }
 }

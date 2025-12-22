@@ -1,21 +1,26 @@
 import { useState, useEffect, FormEvent } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
-import { useDispatch, useSelector } from 'react-redux';
+import { Link } from 'react-router-dom';
+import { useSelector } from 'react-redux';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Sparkles, Copy, Check, TrendingUp, Clock,
   Hash, MessageSquare, BarChart3, Zap, Instagram,
   Facebook, Youtube, Video, Image, FileText, Camera,
-  LogOut, History as HistoryIcon, User, Loader2,
-  Linkedin, Twitter, Ghost, Clapperboard, Layers, ChevronDown, ChevronUp,
+  Loader2, Linkedin, Twitter, Ghost, Clapperboard, Layers, ChevronDown, ChevronUp,
   ChevronLeft, ChevronRight
 } from 'lucide-react';
-import { SocialIcon } from 'react-social-icons';
+import facebookLogo from '../assets/images/facebook.png';
+import instagramLogo from '../assets/images/instagram.png';
+import tiktokLogo from '../assets/images/tiktok.png';
+import youtubeLogo from '../assets/images/youtube.png';
+import snapchatLogo from '../assets/images/snapchat.png';
+import linkedinLogo from '../assets/images/linkedin.png';
+import twitterLogo from '../assets/images/twitter.png';
 import { RootState } from '../store/store';
-import { logout } from '../store/authSlice';
 import api from '../services/api';
 import { Caption, Platform, ContentType, UsageStats } from '../types';
 import { CopyToClipboard } from 'react-copy-to-clipboard';
+import Navbar from '../components/Navbar';
 
 const PLATFORMS: { value: Platform; label: string; icon: any; color: string; supportedContentTypes: ContentType[] }[] = [
   { value: 'instagram', label: 'Instagram', icon: Instagram, color: 'from-purple-500 to-pink-500', supportedContentTypes: ['short_video', 'image', 'carousel', 'story'] },
@@ -134,37 +139,34 @@ const contentArt = (type: ContentType) => {
 };
 
 const platformArt = (platform: Platform) => {
-  const baseClass =
-    'w-16 h-16 rounded-2xl bg-white flex items-center justify-center shadow-[0_6px_18px_rgba(0,0,0,0.08)] ring-1 ring-black/5';
+  const baseClass = 'flex items-center justify-center';
 
-  const platformMap: Record<
-    Platform,
-    { url: string; bgColor?: string; fgColor?: string }
-  > = {
-    instagram: { url: 'https://www.instagram.com' },
-    tiktok: { url: 'https://www.tiktok.com', bgColor: '#000', fgColor: '#fff' },
-    youtube_shorts: { url: 'https://www.youtube.com', bgColor: '#ff0000', fgColor: '#fff' },
-    youtube_long: { url: 'https://www.youtube.com', bgColor: '#ff0000', fgColor: '#fff' },
-    facebook: { url: 'https://www.facebook.com', bgColor: '#1877f2', fgColor: '#fff' },
-    linkedin: { url: 'https://www.linkedin.com', bgColor: '#0a66c2', fgColor: '#fff' },
-    x: { url: 'https://twitter.com', bgColor: '#0f172a', fgColor: '#fff' },
-    pinterest: { url: 'https://www.pinterest.com', bgColor: '#e60023', fgColor: '#fff' },
-    snapchat: { url: 'https://www.snapchat.com', bgColor: '#fffc00', fgColor: '#000' },
-    all: { url: 'https://www.google.com', bgColor: '#4f46e5', fgColor: '#fff' },
+  const imageMap: Partial<Record<Platform, string>> = {
+    instagram: instagramLogo,
+    tiktok: tiktokLogo,
+    youtube_shorts: youtubeLogo,
+    youtube_long: youtubeLogo,
+    facebook: facebookLogo,
+    linkedin: linkedinLogo,
+    x: twitterLogo,
+    snapchat: snapchatLogo,
   };
 
-  const iconProps = platformMap[platform] || platformMap.all;
+  const imgSrc = imageMap[platform];
 
+  if (imgSrc) {
+    return (
+      <div className={baseClass}>
+        <img src={imgSrc} alt={platform} className="w-12 h-12 object-contain" />
+      </div>
+    );
+  }
+
+  // Fallback simple icon for platforms without a provided image (e.g., Pinterest)
+  const FallbackIcon = platform === 'pinterest' ? Layers : Sparkles;
   return (
-    <div className={baseClass}>
-      <SocialIcon
-        url={iconProps.url}
-        bgColor={iconProps.bgColor}
-        fgColor={iconProps.fgColor}
-        style={{ height: 48, width: 48 }}
-        target="_blank"
-        rel="noreferrer"
-      />
+    <div className={`${baseClass} w-12 h-12 rounded-full bg-gradient-to-br from-indigo-600 to-purple-600`}>
+      <FallbackIcon className="w-8 h-8 text-white" />
     </div>
   );
 };
@@ -174,8 +176,6 @@ const MAX_FREE_PLATFORMS = 4;
 
 export default function Dashboard() {
   const { user } = useSelector((state: RootState) => state.auth);
-  const dispatch = useDispatch();
-  const navigate = useNavigate();
 
   const [selectedPlatforms, setSelectedPlatforms] = useState<Platform[]>([
     'facebook',
@@ -282,67 +282,13 @@ export default function Dashboard() {
     }
   };
 
-  const handleLogout = () => {
-    dispatch(logout());
-    navigate('/login');
-  };
-
   const progressPercentage = usage
     ? (usage.captionsGenerated / usage.monthlyLimit) * 100
     : 0;
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-purple-50">
-      {/* Navigation */}
-      <motion.nav
-        initial={{ y: -20, opacity: 0 }}
-        animate={{ y: 0, opacity: 1 }}
-        className="bg-white/80 backdrop-blur-lg shadow-sm border-b border-gray-200 sticky top-0 z-50"
-      >
-        <div className="container mx-auto px-4 sm:px-6 py-4">
-          <div className="flex justify-between items-center">
-            <Link to="/">
-              <motion.div
-                className="flex items-center space-x-2"
-                whileHover={{ scale: 1.02 }}
-              >
-                <Sparkles className="w-7 h-7 text-indigo-600" />
-                <h1 className="text-xl sm:text-2xl font-bold bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">
-                  captions for you
-                </h1>
-              </motion.div>
-            </Link>
-            <div className="flex items-center space-x-2 sm:space-x-4">
-              <Link to="/history">
-                <motion.button
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.95 }}
-                  className="p-2 text-gray-700 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors"
-                >
-                  <HistoryIcon className="w-5 h-5" />
-                </motion.button>
-              </Link>
-              <Link to="/profile">
-                <motion.button
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.95 }}
-                  className="p-2 text-gray-700 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors"
-                >
-                  <User className="w-5 h-5" />
-                </motion.button>
-              </Link>
-              <motion.button
-                onClick={handleLogout}
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-                className="p-2 text-gray-700 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-              >
-                <LogOut className="w-5 h-5" />
-              </motion.button>
-            </div>
-          </div>
-        </div>
-      </motion.nav>
+      <Navbar />
 
       <main className="container mx-auto px-4 sm:px-6 py-6 sm:py-8">
         {/* Welcome Section */}
@@ -542,7 +488,9 @@ export default function Dashboard() {
                             : 'border-gray-200 bg-white hover:border-gray-300 shadow-[0_4px_12px_rgba(0,0,0,0.04)]'
                         }`}
                       >
-                        {contentArt(type.value)}
+                        <div className="flex items-center justify-center">
+                          {contentArt(type.value)}
+                        </div>
                         <span className={`text-base font-semibold text-center leading-tight ${isSelected ? 'text-indigo-900' : 'text-gray-700'}`}>
                           {type.label}
                         </span>

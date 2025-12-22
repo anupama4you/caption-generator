@@ -5,7 +5,12 @@ import { authMiddleware } from '../middleware/auth.middleware';
 const router = Router();
 const paymentController = new PaymentController();
 
-// All routes require authentication
+// GET /api/payment/pricing - Get pricing from Stripe (public endpoint)
+router.get('/pricing', (req, res) =>
+  paymentController.getPricing(req, res)
+);
+
+// All other routes require authentication
 router.use(authMiddleware);
 
 // POST /api/payment/create-checkout-session - Create Stripe checkout session
