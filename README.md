@@ -299,7 +299,7 @@ This is a sellable product. For contributions or commercial inquiries, please co
 
 ## License
 
-Copyright © 2024. All rights reserved.
+Copyright © 2026. All rights reserved.
 
 ## Support
 

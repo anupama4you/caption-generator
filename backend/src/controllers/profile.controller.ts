@@ -98,7 +98,7 @@ export class ProfileController {
         success: true,
         data: usage || {
           captionsGenerated: 0,
-          monthlyLimit: req.user.subscriptionTier === 'FREE' ? 10 : 100,
+          monthlyLimit: req.user.subscriptionTier === 'FREE' ? 5 : 100,
         },
       });
     } catch (error) {

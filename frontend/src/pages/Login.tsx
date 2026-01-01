@@ -4,7 +4,7 @@ import { useDispatch } from 'react-redux';
 import { Sparkles } from 'lucide-react';
 import api from '../services/api';
 import { setUser } from '../store/authSlice';
-import mainLogo from '../assets/images/main-logo.png';
+import mainLogo from '../assets/images/main-logo.svg';
 
 export default function Login() {
   const [email, setEmail] = useState('');
@@ -46,11 +46,6 @@ export default function Login() {
               className="h-16 w-auto object-contain drop-shadow-md"
             />
           </Link>
-          <div className="flex items-center justify-center gap-2 mb-2">
-            <Sparkles className="w-6 h-6 text-indigo-600" />
-            <h2 className="text-3xl font-bold text-gray-900">Welcome Back</h2>
-          </div>
-          <p className="text-gray-600 text-sm">Sign in to continue to your account</p>
         </div>
 
         {error && (

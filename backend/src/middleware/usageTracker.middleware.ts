@@ -58,7 +58,7 @@ export const checkCaptionLimit = async (
         return res.status(404).json({ error: 'User not found' });
       }
 
-      const monthlyLimit = user.subscriptionTier === 'FREE' ? 10 : 100;
+      const monthlyLimit = user.subscriptionTier === 'FREE' ? 5 : 100;
 
       usage = await prisma.usageTracking.create({
         data: {

@@ -6,7 +6,7 @@ import { useDispatch, useSelector } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
 import { logout } from '../store/authSlice';
 import { RootState } from '../store/store';
-import mainLogo from '../assets/images/main-logo.png';
+import mainLogo from '../assets/images/main-logo.svg';
 
 interface NavbarProps {
   showAuthButtons?: boolean;

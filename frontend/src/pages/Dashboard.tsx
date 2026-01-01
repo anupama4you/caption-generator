@@ -7,7 +7,7 @@ import {
   Hash, MessageSquare, BarChart3, Zap, Instagram,
   Facebook, Youtube, Video, Image, FileText, Camera,
   Loader2, Linkedin, Twitter, Ghost, Clapperboard, Layers, ChevronDown, ChevronUp,
-  ChevronLeft, ChevronRight
+  ChevronLeft, ChevronRight, Crown
 } from 'lucide-react';
 import facebookLogo from '../assets/images/facebook.png';
 import instagramLogo from '../assets/images/instagram.png';
@@ -42,102 +42,6 @@ const CONTENT_TYPES: { value: ContentType; label: string; icon: any }[] = [
   { value: 'text_only', label: 'Text Only', icon: FileText },
 ];
 
-const contentArt = (type: ContentType) => {
-  const baseClass = 'w-20 h-20 rounded-2xl shadow-[0_6px_18px_rgba(0,0,0,0.08)] ring-1 ring-black/5';
-  switch (type) {
-    case 'short_video':
-      return (
-        <svg className={baseClass} viewBox="0 0 64 64">
-          <defs>
-            <linearGradient id="sv" x1="0" x2="1" y1="0" y2="1">
-              <stop offset="0%" stopColor="#4F46E5" />
-              <stop offset="100%" stopColor="#7C3AED" />
-            </linearGradient>
-          </defs>
-          <rect x="6" y="10" width="52" height="44" rx="10" fill="url(#sv)" />
-          <rect x="14" y="18" width="36" height="28" rx="6" fill="#fff" opacity="0.16" />
-          <path d="M30 24l12 8-12 8v-16z" fill="#fff" />
-        </svg>
-      );
-    case 'long_video':
-      return (
-        <svg className={baseClass} viewBox="0 0 64 64">
-          <defs>
-            <linearGradient id="lv" x1="0" x2="1" y1="0" y2="1">
-              <stop offset="0%" stopColor="#EF4444" />
-              <stop offset="100%" stopColor="#F59E0B" />
-            </linearGradient>
-          </defs>
-          <rect x="6" y="10" width="52" height="44" rx="10" fill="url(#lv)" />
-          <rect x="12" y="18" width="40" height="6" rx="3" fill="#fff" opacity="0.4" />
-          <rect x="12" y="28" width="30" height="4" rx="2" fill="#fff" opacity="0.5" />
-          <rect x="12" y="36" width="22" height="4" rx="2" fill="#fff" opacity="0.5" />
-          <path d="M38 30l10 7-10 7v-14z" fill="#fff" />
-        </svg>
-      );
-    case 'image':
-      return (
-        <svg className={baseClass} viewBox="0 0 64 64">
-          <defs>
-            <linearGradient id="img" x1="0" x2="1" y1="0" y2="1">
-              <stop offset="0%" stopColor="#0EA5E9" />
-              <stop offset="100%" stopColor="#22D3EE" />
-            </linearGradient>
-          </defs>
-          <rect x="8" y="12" width="48" height="40" rx="8" fill="url(#img)" />
-          <circle cx="22" cy="26" r="5" fill="#fff" opacity="0.8" />
-          <path d="M16 44l10-12 8 8 8-10 10 14H16z" fill="#fff" opacity="0.9" />
-        </svg>
-      );
-    case 'carousel':
-      return (
-        <svg className={baseClass} viewBox="0 0 64 64">
-          <defs>
-            <linearGradient id="car" x1="0" x2="1" y1="0" y2="1">
-              <stop offset="0%" stopColor="#8B5CF6" />
-              <stop offset="100%" stopColor="#EC4899" />
-            </linearGradient>
-          </defs>
-          <rect x="6" y="12" width="32" height="40" rx="8" fill="url(#car)" />
-          <rect x="26" y="12" width="32" height="40" rx="8" fill="url(#car)" opacity="0.65" />
-          <rect x="16" y="20" width="32" height="24" rx="6" fill="#fff" opacity="0.85" />
-          <path d="M22 38l6-8 6 6 4-6 6 8H22z" fill="#8B5CF6" opacity="0.9" />
-        </svg>
-      );
-    case 'story':
-      return (
-        <svg className={baseClass} viewBox="0 0 64 64">
-          <defs>
-            <linearGradient id="sty" x1="0" x2="1" y1="0" y2="1">
-              <stop offset="0%" stopColor="#10B981" />
-              <stop offset="100%" stopColor="#34D399" />
-            </linearGradient>
-          </defs>
-          <rect x="14" y="8" width="36" height="48" rx="10" fill="url(#sty)" />
-          <rect x="20" y="16" width="24" height="12" rx="4" fill="#fff" opacity="0.25" />
-          <rect x="20" y="32" width="24" height="4" rx="2" fill="#fff" opacity="0.5" />
-          <rect x="20" y="40" width="16" height="4" rx="2" fill="#fff" opacity="0.5" />
-        </svg>
-      );
-    case 'text_only':
-    default:
-      return (
-        <svg className={baseClass} viewBox="0 0 64 64">
-          <defs>
-            <linearGradient id="txt" x1="0" x2="1" y1="0" y2="1">
-              <stop offset="0%" stopColor="#6366F1" />
-              <stop offset="100%" stopColor="#3B82F6" />
-            </linearGradient>
-          </defs>
-          <rect x="10" y="10" width="44" height="44" rx="8" fill="url(#txt)" />
-          <rect x="18" y="22" width="28" height="4" rx="2" fill="#fff" opacity="0.9" />
-          <rect x="18" y="30" width="22" height="4" rx="2" fill="#fff" opacity="0.8" />
-          <rect x="18" y="38" width="18" height="4" rx="2" fill="#fff" opacity="0.7" />
-        </svg>
-      );
-  }
-};
-
 const platformArt = (platform: Platform) => {
   const baseClass = 'flex items-center justify-center';
 
@@ -157,33 +61,46 @@ const platformArt = (platform: Platform) => {
   if (imgSrc) {
     return (
       <div className={baseClass}>
-        <img src={imgSrc} alt={platform} className="w-12 h-12 object-contain" />
+        <img src={imgSrc} alt={platform} className="w-8 h-8 object-contain" />
       </div>
     );
   }
 
-  // Fallback simple icon for platforms without a provided image (e.g., Pinterest)
   const FallbackIcon = platform === 'pinterest' ? Layers : Sparkles;
   return (
-    <div className={`${baseClass} w-12 h-12 rounded-full bg-gradient-to-br from-indigo-600 to-purple-600`}>
-      <FallbackIcon className="w-8 h-8 text-white" />
+    <div className={`${baseClass} w-8 h-8 rounded-full bg-gradient-to-br from-indigo-600 to-purple-600`}>
+      <FallbackIcon className="w-5 h-5 text-white" />
     </div>
   );
 };
 
 // Maximum platforms allowed for free users
-const MAX_FREE_PLATFORMS = 4;
+const MAX_FREE_PLATFORMS = 2;
+
+interface PricingData {
+  premium: {
+    amount: number;
+    currency: string;
+    interval: string;
+    name: string;
+  };
+  free: {
+    amount: number;
+    currency: string;
+    interval: string;
+    name: string;
+  };
+}
 
 export default function Dashboard() {
   const { user } = useSelector((state: RootState) => state.auth);
 
   const [selectedPlatforms, setSelectedPlatforms] = useState<Platform[]>([
-    'facebook',
     'instagram',
     'tiktok',
-    'youtube_shorts',
   ]);
   const [contentType, setContentType] = useState<ContentType>('short_video');
+  const [pricing, setPricing] = useState<PricingData | null>(null);
   const [description, setDescription] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -203,6 +120,7 @@ export default function Dashboard() {
 
   useEffect(() => {
     fetchUsage();
+    fetchPricing();
   }, []);
 
   // Update selected platforms when content type changes
@@ -232,6 +150,22 @@ export default function Dashboard() {
       setUsage(response.data.data);
     } catch (err) {
       console.error('Failed to fetch usage:', err);
+    }
+  };
+
+  const fetchPricing = async () => {
+    try {
+      const response = await api.get('/payment/pricing');
+      if (response?.data?.success) {
+        setPricing(response.data.pricing);
+      }
+    } catch (err) {
+      console.error('Failed to fetch pricing:', err);
+      // Set default pricing as fallback
+      setPricing({
+        premium: { amount: 9.99, currency: 'USD', interval: 'month', name: 'Premium' },
+        free: { amount: 0, currency: 'USD', interval: 'forever', name: 'Free' },
+      });
     }
   };
 
@@ -290,467 +224,211 @@ export default function Dashboard() {
     <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-purple-50">
       <Navbar />
 
-      <main className="container mx-auto px-4 sm:px-6 py-6 sm:py-8">
-        {/* Welcome Section */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.1 }}
-          className="mb-6"
-        >
-          <h2 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2">
-            Welcome back, {user?.name}! 👋
-          </h2>
-          <p className="text-gray-600">Generate engaging captions optimized for every platform</p>
-        </motion.div>
-
-        {/* Usage Stats */}
-        {usage && (
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.2 }}
-            className="bg-white rounded-2xl shadow-lg p-6 mb-8 border border-gray-100"
-          >
-            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 gap-2">
-              <div>
-                <span className="text-sm font-medium text-gray-700">Monthly Usage</span>
-                <div className="text-2xl font-bold text-indigo-600">
-                  {usage.captionsGenerated} / {usage.monthlyLimit}
-                </div>
-              </div>
-              <motion.span
-                whileHover={{ scale: 1.05 }}
-                className={`px-4 py-2 rounded-full text-sm font-semibold ${
-                  user?.subscriptionTier === 'FREE'
-                    ? 'bg-gray-100 text-gray-700'
-                    : 'bg-gradient-to-r from-purple-500 to-pink-500 text-white'
-                }`}
-              >
-                {user?.subscriptionTier === 'FREE' ? '🆓 Free Tier' : '⭐ Premium'}
-              </motion.span>
-            </div>
-            <div className="w-full bg-gray-200 rounded-full h-3 overflow-hidden">
-              <motion.div
-                initial={{ width: 0 }}
-                animate={{ width: `${Math.min(progressPercentage, 100)}%` }}
-                transition={{ duration: 1, ease: "easeOut" }}
-                className="bg-gradient-to-r from-indigo-500 to-purple-500 h-3 rounded-full"
-              />
-            </div>
-            {usage.captionsGenerated >= usage.monthlyLimit && (
-              <motion.p
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                className="text-sm text-red-600 mt-3 flex items-center gap-2"
-              >
-                <Zap className="w-4 h-4" />
-                You've reached your monthly limit.{' '}
-                <Link to="/pricing" className="text-indigo-600 hover:text-indigo-700 font-semibold underline">
-                  Upgrade to Premium
-                </Link>{' '}
-                for more captions!
-              </motion.p>
-            )}
-          </motion.div>
-        )}
-
-        {/* Premium Upgrade Banner - Show only for free users */}
-        {user?.subscriptionTier === 'FREE' && (
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.3 }}
-            className="bg-gradient-to-r from-indigo-600 to-purple-600 rounded-2xl shadow-lg p-6 sm:p-8 mb-8 text-white overflow-hidden relative"
-          >
-            {/* Background decoration */}
-            <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full -mr-32 -mt-32"></div>
-            <div className="absolute bottom-0 left-0 w-48 h-48 bg-white/10 rounded-full -ml-24 -mb-24"></div>
-
-            <div className="relative z-10">
-              <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
-                <div className="flex-1">
-                  <div className="flex items-center gap-2 mb-3">
-                    <Sparkles className="w-8 h-8" />
-                    <h3 className="text-2xl sm:text-3xl font-bold">Upgrade to Premium</h3>
-                  </div>
-                  <p className="text-indigo-100 mb-6 text-lg">
-                    Unlock unlimited caption generation and advanced features
-                  </p>
-
-                  <div className="grid sm:grid-cols-2 gap-4 mb-6">
-                    <div className="flex items-start gap-3">
-                      <div className="bg-white/20 p-2 rounded-lg">
-                        <Zap className="w-5 h-5" />
-                      </div>
-                      <div>
-                        <h4 className="font-semibold mb-1">100 Generations/Month</h4>
-                        <p className="text-indigo-100 text-sm">10x more than free plan</p>
-                      </div>
-                    </div>
-                    <div className="flex items-start gap-3">
-                      <div className="bg-white/20 p-2 rounded-lg">
-                        <Layers className="w-5 h-5" />
-                      </div>
-                      <div>
-                        <h4 className="font-semibold mb-1">Unlimited Platforms</h4>
-                        <p className="text-indigo-100 text-sm">Generate for all platforms at once</p>
-                      </div>
-                    </div>
-                    <div className="flex items-start gap-3">
-                      <div className="bg-white/20 p-2 rounded-lg">
-                        <BarChart3 className="w-5 h-5" />
-                      </div>
-                      <div>
-                        <h4 className="font-semibold mb-1">Advanced Analytics</h4>
-                        <p className="text-indigo-100 text-sm">Deeper insights & predictions</p>
-                      </div>
-                    </div>
-                    <div className="flex items-start gap-3">
-                      <div className="bg-white/20 p-2 rounded-lg">
-                        <Sparkles className="w-5 h-5" />
-                      </div>
-                      <div>
-                        <h4 className="font-semibold mb-1">Priority Support</h4>
-                        <p className="text-indigo-100 text-sm">Get help when you need it</p>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="flex-shrink-0">
-                  <Link
-                    to="/pricing"
-                    className="inline-block bg-white text-indigo-600 px-8 py-4 rounded-xl font-bold text-lg hover:bg-indigo-50 transition-all shadow-lg hover:shadow-xl transform hover:scale-105"
-                  >
-                    <div className="flex items-center gap-2">
-                      <span>Upgrade Now</span>
-                      <ChevronRight className="w-5 h-5" />
-                    </div>
-                    <div className="text-sm font-normal mt-1 text-indigo-500">
-                      Just $9.99/month
-                    </div>
-                  </Link>
-                </div>
-              </div>
-            </div>
-          </motion.div>
-        )}
-
+      <main className="container mx-auto px-4 sm:px-6 py-4 max-w-7xl">
         {/* Conditional Layout: Show form OR results */}
         {generatedCaptions.length === 0 ? (
-          /* Generation Form - Two column layout */
-          <div className="grid lg:grid-cols-3 gap-6">
-            {/* Left: Generation Form */}
-            <motion.div
-              initial={{ opacity: 0, x: -20 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ delay: 0.3 }}
-              className="lg:col-span-2 bg-white rounded-2xl shadow-lg p-6 sm:p-8 border border-gray-100"
-            >
-              <div className="flex items-center gap-2 mb-6">
-                <Sparkles className="w-6 h-6 text-indigo-600" />
-                <h3 className="text-xl sm:text-2xl font-bold text-gray-900">Generate Caption</h3>
-              </div>
-
-            <AnimatePresence>
-              {error && (
-                <motion.div
-                  initial={{ opacity: 0, y: -10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -10 }}
-                  className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-xl mb-6"
-                >
-                  {error}
-                </motion.div>
-              )}
-            </AnimatePresence>
-
-            <form onSubmit={handleGenerate} className="space-y-6">
-              {/* Content Type */}
+          /* Generation Form - Compact Single View */
+          <div className="max-w-6xl mx-auto">
+            {/* Top Bar: Welcome + Usage */}
+            <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 mb-4">
               <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-3">
-                  Content Type
-                </label>
-                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                  {CONTENT_TYPES.map((type) => {
-                    const isSelected = contentType === type.value;
-                    return (
-                      <motion.button
-                        key={type.value}
-                        type="button"
-                        onClick={() => setContentType(type.value)}
-                        whileHover={{ scale: 1.01 }}
-                        whileTap={{ scale: 0.99 }}
-                        className={`aspect-square w-full rounded-xl border-2 transition-all flex flex-col items-center justify-center gap-4 ${
-                          isSelected
-                            ? 'border-indigo-500 bg-indigo-50 shadow-md'
-                            : 'border-gray-200 bg-white hover:border-gray-300 shadow-[0_4px_12px_rgba(0,0,0,0.04)]'
-                        }`}
-                      >
-                        <div className="flex items-center justify-center">
-                          {contentArt(type.value)}
-                        </div>
-                        <span className={`text-base font-semibold text-center leading-tight ${isSelected ? 'text-indigo-900' : 'text-gray-700'}`}>
-                          {type.label}
-                        </span>
-                      </motion.button>
-                    );
-                  })}
-                </div>
+                <h2 className="text-2xl font-bold text-gray-900">
+                  Welcome, {user?.name}! 👋
+                </h2>
+                <p className="text-sm text-gray-600">Generate engaging captions for every platform</p>
               </div>
 
-              {/* Platform Selection */}
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-3">
-                  Select Platforms
-                  {isFreeUser && (
-                    <span className="ml-2 text-xs text-gray-500">
-                      ({selectedPlatforms.length}/{MAX_FREE_PLATFORMS} selected)
-                    </span>
-                  )}
-                </label>
-                <div className="grid grid-cols-2 gap-3">
-                  {getAvailablePlatforms().map((platform) => {
-                    const isSelected = selectedPlatforms.includes(platform.value);
-                    const isDisabled = isFreeUser && !isSelected && selectedPlatforms.length >= MAX_FREE_PLATFORMS;
-                    const art = platformArt(platform.value);
-
-                    return (
-                      <motion.button
-                        key={platform.value}
-                        type="button"
-                        onClick={() => togglePlatform(platform.value)}
-                        whileHover={{ scale: isDisabled ? 1 : 1.02 }}
-                        whileTap={{ scale: isDisabled ? 1 : 0.98 }}
-                        disabled={isDisabled}
-                        className={`relative overflow-hidden p-4 rounded-xl border-2 transition-all ${
-                          isSelected
-                            ? 'border-indigo-500 bg-indigo-50'
-                            : isDisabled
-                            ? 'border-gray-200 bg-gray-50 opacity-50 cursor-not-allowed'
-                            : 'border-gray-200 bg-white hover:border-gray-300'
-                        }`}
-                      >
-                        {isSelected && (
-                          <div className="absolute top-2 right-2 bg-indigo-600 text-white rounded-full p-1">
-                            <Check className="w-3 h-3" />
-                          </div>
-                        )}
-                        <div className="flex flex-col items-center gap-3">
-                          {art}
-                          <span className={`text-sm font-semibold ${isSelected ? 'text-indigo-900' : isDisabled ? 'text-gray-400' : 'text-gray-700'}`}>
-                            {platform.label}
-                          </span>
-                        </div>
-                      </motion.button>
-                    );
-                  })}
-                </div>
-                {isFreeUser && selectedPlatforms.length >= MAX_FREE_PLATFORMS && (
-                  <p className="text-xs text-amber-600 mt-2 flex items-center gap-1">
-                    <Zap className="w-3 h-3" />
-                    Upgrade to Premium for unlimited platform selection
-                  </p>
-                )}
-              </div>
-
-              {/* Description */}
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">
-                  Describe Your Content
-                </label>
-                <textarea
-                  value={description}
-                  onChange={(e) => setDescription(e.target.value)}
-                  placeholder="Example: A morning workout routine showing 5 exercises for abs, filmed in a modern gym with motivational background music..."
-                  className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all resize-none"
-                  rows={5}
-                  required
-                />
-              </div>
-
-              {/* Generate Button */}
-              <motion.button
-                type="submit"
-                disabled={loading || !description.trim() || selectedPlatforms.length === 0}
-                whileHover={!loading ? { scale: 1.02 } : {}}
-                whileTap={!loading ? { scale: 0.98 } : {}}
-                className="w-full bg-gradient-to-r from-indigo-600 to-purple-600 text-white py-4 rounded-xl font-semibold shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed transition-all flex items-center justify-center gap-2"
-              >
-                {loading ? (
-                  <>
-                    <Loader2 className="w-5 h-5 animate-spin" />
-                    Generating Magic...
-                  </>
-                ) : (
-                  <>
-                    <Sparkles className="w-5 h-5" />
-                    Generate Captions
-                  </>
-                )}
-              </motion.button>
-            </form>
-          </motion.div>
-
-          {/* Right: Benefits/Why This App Card */}
-          <motion.div
-            initial={{ opacity: 0, x: 20 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ delay: 0.4 }}
-            className="space-y-6"
-          >
-            {/* Why This App Card */}
-            <motion.div
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ delay: 0.5, duration: 0.4 }}
-              whileHover={{ scale: 1.02 }}
-              className="bg-gradient-to-br from-indigo-500 via-purple-500 to-purple-600 rounded-2xl shadow-xl p-6 text-white relative overflow-hidden"
-            >
-              {/* Animated background effect */}
-              <motion.div
-                className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/10 to-white/0"
-                animate={{
-                  x: ['-100%', '100%'],
-                }}
-                transition={{
-                  duration: 3,
-                  repeat: Infinity,
-                  repeatDelay: 1,
-                  ease: "easeInOut",
-                }}
-              />
-
-              <div className="relative z-10">
-                <motion.div
-                  initial={{ y: -10, opacity: 0 }}
-                  animate={{ y: 0, opacity: 1 }}
-                  transition={{ delay: 0.6 }}
-                  className="flex items-center gap-2 mb-4"
-                >
-                  <motion.div
-                    animate={{ rotate: [0, 10, -10, 0] }}
-                    transition={{ duration: 2, repeat: Infinity, repeatDelay: 3 }}
-                  >
-                    <Zap className="w-6 h-6" />
-                  </motion.div>
-                  <h4 className="text-xl font-bold">Why Choose Us?</h4>
-                </motion.div>
-                <motion.p
-                  initial={{ y: 10, opacity: 0 }}
-                  animate={{ y: 0, opacity: 1 }}
-                  transition={{ delay: 0.7 }}
-                  className="text-indigo-100 text-sm mb-6"
-                >
-                  Create engaging, platform-optimized captions in seconds with AI-powered analytics
-                </motion.p>
-
-                <div className="space-y-4">
-                  {[
-                    {
-                      icon: Sparkles,
-                      title: "AI-Powered Generation",
-                      desc: "Get 3 unique captions per platform, tailored to each platform's best practices",
-                      delay: 0.8
-                    },
-                    {
-                      icon: TrendingUp,
-                      title: "Smart Analytics",
-                      desc: "See engagement scores, virality predictions, and best posting times instantly",
-                      delay: 0.9
-                    },
-                    {
-                      icon: BarChart3,
-                      title: "Multi-Platform Support",
-                      desc: "Generate captions for Instagram, TikTok, YouTube, LinkedIn, and more - all at once",
-                      delay: 1.0
-                    },
-                    {
-                      icon: Clock,
-                      title: "Save Hours of Time",
-                      desc: "Stop struggling with writer's block. Get professional captions in under 30 seconds",
-                      delay: 1.1
-                    }
-                  ].map((item, index) => (
+              {/* Usage Stats - Compact */}
+              {usage && (
+                <div className="flex items-center gap-4">
+                  <div className="text-right">
+                    <div className="text-sm text-gray-600">Monthly Usage</div>
+                    <div className="text-xl font-bold text-indigo-600">
+                      {usage.captionsGenerated} / {usage.monthlyLimit}
+                    </div>
+                  </div>
+                  <div className="w-32 bg-gray-200 rounded-full h-2">
                     <motion.div
-                      key={index}
-                      initial={{ x: -20, opacity: 0 }}
-                      animate={{ x: 0, opacity: 1 }}
-                      transition={{ delay: item.delay, duration: 0.4 }}
-                      whileHover={{ x: 5, transition: { duration: 0.2 } }}
-                      className="flex items-start gap-3"
-                    >
-                      <motion.div
-                        whileHover={{ scale: 1.1, rotate: 5 }}
-                        className="bg-white/20 backdrop-blur-sm rounded-lg p-2 mt-0.5"
-                      >
-                        <item.icon className="w-4 h-4" />
-                      </motion.div>
-                      <div>
-                        <h5 className="font-semibold mb-1">{item.title}</h5>
-                        <p className="text-sm text-indigo-100">
-                          {item.desc}
-                        </p>
-                      </div>
-                    </motion.div>
-                  ))}
+                      initial={{ width: 0 }}
+                      animate={{ width: `${Math.min(progressPercentage, 100)}%` }}
+                      transition={{ duration: 1, ease: "easeOut" }}
+                      className="bg-gradient-to-r from-indigo-500 to-purple-500 h-2 rounded-full"
+                    />
+                  </div>
+                  <span className={`px-3 py-1 rounded-full text-xs font-semibold ${
+                    isFreeUser ? 'bg-gray-100 text-gray-700' : 'bg-gradient-to-r from-purple-500 to-pink-500 text-white'
+                  }`}>
+                    {isFreeUser ? 'Free' : 'Premium'}
+                  </span>
                 </div>
-              </div>
-            </motion.div>
+              )}
+            </div>
 
-            {/* Quick Tips Card */}
-            <motion.div
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ delay: 0.6, duration: 0.4 }}
-              whileHover={{ scale: 1.02 }}
-              className="bg-white rounded-2xl shadow-lg p-6 border border-gray-100 hover:shadow-xl transition-shadow"
-            >
+            {/* Premium Upgrade Banner - Compact */}
+            {isFreeUser && (
               <motion.div
-                initial={{ y: -10, opacity: 0 }}
-                animate={{ y: 0, opacity: 1 }}
-                transition={{ delay: 1.2 }}
-                className="flex items-center gap-2 mb-4"
+                initial={{ opacity: 0, y: -10 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="bg-gradient-to-r from-indigo-600 to-purple-600 rounded-xl p-4 mb-4 text-white flex items-center justify-between"
               >
-                <motion.div
-                  animate={{ scale: [1, 1.1, 1] }}
-                  transition={{ duration: 2, repeat: Infinity, repeatDelay: 2 }}
+                <div className="flex items-center gap-3">
+                  <Crown className="w-6 h-6" />
+                  <div>
+                    <div className="font-bold">Upgrade to Premium</div>
+                    <div className="text-xs text-indigo-100">100 captions/month • Unlimited platforms • Advanced analytics</div>
+                  </div>
+                </div>
+                <Link
+                  to="/pricing"
+                  className="bg-white text-indigo-600 px-4 py-2 rounded-lg font-semibold text-sm hover:bg-indigo-50 transition-all whitespace-nowrap"
                 >
-                  <MessageSquare className="w-5 h-5 text-indigo-600" />
-                </motion.div>
-                <h4 className="font-bold text-gray-900">Pro Tips</h4>
+                  {pricing ? `$${pricing.premium.amount.toFixed(2)}/mo` : '$9.99/mo'}
+                </Link>
               </motion.div>
-              <ul className="space-y-3 text-sm text-gray-700">
-                {[
-                  "Be specific in your content description for better results",
-                  "Select multiple platforms to save time on cross-posting",
-                  "Use the analytics to pick the best-performing caption",
-                  "Copy captions with one click and paste directly to your posts"
-                ].map((tip, index) => (
-                  <motion.li
-                    key={index}
-                    initial={{ x: -10, opacity: 0 }}
-                    animate={{ x: 0, opacity: 1 }}
-                    transition={{ delay: 1.3 + index * 0.1, duration: 0.3 }}
-                    whileHover={{ x: 5, transition: { duration: 0.2 } }}
-                    className="flex items-start gap-2 cursor-default"
+            )}
+
+            {/* Main Form Card */}
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="bg-white rounded-2xl shadow-lg p-6 border border-gray-100"
+            >
+              <div className="flex items-center gap-2 mb-4">
+                <Sparkles className="w-5 h-5 text-indigo-600" />
+                <h3 className="text-lg font-bold text-gray-900">Generate Caption</h3>
+              </div>
+
+              <AnimatePresence>
+                {error && (
+                  <motion.div
+                    initial={{ opacity: 0, y: -10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -10 }}
+                    className="bg-red-50 border border-red-200 text-red-700 px-4 py-2 rounded-lg mb-4 text-sm"
                   >
-                    <motion.span
-                      initial={{ scale: 0 }}
-                      animate={{ scale: 1 }}
-                      transition={{ delay: 1.3 + index * 0.1 + 0.1, type: "spring" }}
-                      className="text-indigo-600 mt-0.5 font-bold"
-                    >
-                      ✓
-                    </motion.span>
-                    <span>{tip}</span>
-                  </motion.li>
-                ))}
-              </ul>
+                    {error}
+                  </motion.div>
+                )}
+              </AnimatePresence>
+
+              <form onSubmit={handleGenerate} className="space-y-4">
+                {/* Content Type - Compact Pills */}
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">
+                    Content Type
+                  </label>
+                  <div className="flex flex-wrap gap-2">
+                    {CONTENT_TYPES.map((type) => {
+                      const Icon = type.icon;
+                      const isSelected = contentType === type.value;
+                      return (
+                        <button
+                          key={type.value}
+                          type="button"
+                          onClick={() => setContentType(type.value)}
+                          className={`flex items-center gap-2 px-4 py-2 rounded-lg border-2 transition-all text-sm font-medium ${
+                            isSelected
+                              ? 'border-indigo-500 bg-indigo-50 text-indigo-700'
+                              : 'border-gray-200 bg-white text-gray-700 hover:border-gray-300'
+                          }`}
+                        >
+                          <Icon className="w-4 h-4" />
+                          {type.label}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* Platform Selection - Compact Grid */}
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">
+                    Select Platforms
+                    {isFreeUser && (
+                      <span className="ml-2 text-xs text-gray-500">
+                        ({selectedPlatforms.length}/{MAX_FREE_PLATFORMS} selected)
+                      </span>
+                    )}
+                  </label>
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                    {getAvailablePlatforms().map((platform) => {
+                      const isSelected = selectedPlatforms.includes(platform.value);
+                      const isDisabled = isFreeUser && !isSelected && selectedPlatforms.length >= MAX_FREE_PLATFORMS;
+                      const art = platformArt(platform.value);
+
+                      return (
+                        <button
+                          key={platform.value}
+                          type="button"
+                          onClick={() => togglePlatform(platform.value)}
+                          disabled={isDisabled}
+                          className={`relative p-3 rounded-lg border-2 transition-all ${
+                            isSelected
+                              ? 'border-indigo-500 bg-indigo-50'
+                              : isDisabled
+                              ? 'border-gray-200 bg-gray-50 opacity-50 cursor-not-allowed'
+                              : 'border-gray-200 bg-white hover:border-gray-300'
+                          }`}
+                        >
+                          {isSelected && (
+                            <div className="absolute top-1 right-1 bg-indigo-600 text-white rounded-full p-0.5">
+                              <Check className="w-3 h-3" />
+                            </div>
+                          )}
+                          <div className="flex flex-col items-center gap-2">
+                            {art}
+                            <span className={`text-xs font-semibold ${isSelected ? 'text-indigo-900' : isDisabled ? 'text-gray-400' : 'text-gray-700'}`}>
+                              {platform.label}
+                            </span>
+                          </div>
+                        </button>
+                      );
+                    })}
+                  </div>
+                  {isFreeUser && selectedPlatforms.length >= MAX_FREE_PLATFORMS && (
+                    <p className="text-xs text-amber-600 mt-2 flex items-center gap-1">
+                      <Zap className="w-3 h-3" />
+                      Upgrade to Premium for unlimited platform selection
+                    </p>
+                  )}
+                </div>
+
+                {/* Description */}
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">
+                    Describe Your Content
+                  </label>
+                  <textarea
+                    value={description}
+                    onChange={(e) => setDescription(e.target.value)}
+                    placeholder="Example: A morning workout routine showing 5 exercises for abs, filmed in a modern gym with motivational background music..."
+                    className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all resize-none text-sm"
+                    rows={3}
+                    required
+                  />
+                </div>
+
+                {/* Generate Button */}
+                <button
+                  type="submit"
+                  disabled={loading || !description.trim() || selectedPlatforms.length === 0}
+                  className="w-full bg-gradient-to-r from-indigo-600 to-purple-600 text-white py-3 rounded-lg font-semibold shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed transition-all flex items-center justify-center gap-2"
+                >
+                  {loading ? (
+                    <>
+                      <Loader2 className="w-5 h-5 animate-spin" />
+                      Generating...
+                    </>
+                  ) : (
+                    <>
+                      <Sparkles className="w-5 h-5" />
+                      Generate Captions
+                    </>
+                  )}
+                </button>
+              </form>
             </motion.div>
-          </motion.div>
-        </div>
+          </div>
         ) : loading ? (
           /* Loading State */
           <motion.div
@@ -891,7 +569,7 @@ export default function Dashboard() {
                                     )}
                                   </div>
 
-                                  {/* Caption Content - Reused from desktop */}
+                                  {/* Caption Content */}
                                   {(caption.platform === 'youtube_shorts' || caption.platform === 'youtube_long') && caption.title ? (
                                     <div className="mb-4">
                                       <div className="mb-3">

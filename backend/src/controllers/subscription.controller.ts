@@ -207,7 +207,7 @@ export class SubscriptionController {
           },
         },
         data: {
-          monthlyLimit: 10,
+          monthlyLimit: 5,
         },
       });
 

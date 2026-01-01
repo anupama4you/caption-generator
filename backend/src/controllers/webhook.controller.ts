@@ -171,7 +171,7 @@ export class WebhookController {
         },
       },
       data: {
-        monthlyLimit: 10,
+        monthlyLimit: 5,
       },
     });
 

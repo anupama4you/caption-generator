@@ -32,16 +32,16 @@ const DEFAULT_PLANS: PlanType[] = [
     currency: 'USD',
     description: 'Perfect for trying out our caption generator',
     features: [
-      '10 caption generations per month',
-      'Up to 4 platforms per generation',
+      '5 caption generations per month',
+      'Up to 2 platforms per generation',
       '3 caption variants per platform',
       'Basic analytics',
       'All content types supported',
       'Profile customization',
     ],
     limitations: [
-      'Limited to 10 generations/month',
-      'Maximum 4 platforms',
+      'Limited to 5 generations/month',
+      'Maximum 2 platforms',
     ],
     buttonText: 'Current Plan',
     highlighted: false,
@@ -207,13 +207,13 @@ export default function Pricing() {
     <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-purple-50">
       <Navbar />
 
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
         {/* Page Title */}
-        <div className="text-center mb-12">
+        <div className="text-center mb-6">
           <motion.h2
             initial={{ opacity: 0, y: -20 }}
             animate={{ opacity: 1, y: 0 }}
-            className="text-4xl font-bold text-gray-900 mb-4"
+            className="text-3xl font-bold text-gray-900 mb-2"
           >
             Choose Your Plan
           </motion.h2>
@@ -221,7 +221,7 @@ export default function Pricing() {
             initial={{ opacity: 0, y: -20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.1 }}
-            className="text-lg text-gray-600"
+            className="text-base text-gray-600"
           >
             Start free, upgrade when you need more
           </motion.p>
@@ -233,7 +233,7 @@ export default function Pricing() {
             initial={{ opacity: 0, y: -20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.2 }}
-            className="text-center mb-8"
+            className="text-center mb-6"
           >
             <span className="inline-flex items-center gap-2 px-4 py-2 bg-indigo-100 text-indigo-700 rounded-full text-sm font-semibold">
               {currentTier === 'PREMIUM' ? (
@@ -256,7 +256,7 @@ export default function Pricing() {
           <motion.div
             initial={{ opacity: 0, y: -10 }}
             animate={{ opacity: 1, y: 0 }}
-            className="max-w-2xl mx-auto mb-6 p-4 bg-green-50 border border-green-200 rounded-lg"
+            className="max-w-2xl mx-auto mb-4 p-3 bg-green-50 border border-green-200 rounded-lg"
           >
             <p className="text-green-600 text-sm font-medium">{successMessage}</p>
           </motion.div>
@@ -267,7 +267,7 @@ export default function Pricing() {
           <motion.div
             initial={{ opacity: 0, y: -10 }}
             animate={{ opacity: 1, y: 0 }}
-            className="max-w-2xl mx-auto mb-6 p-4 bg-red-50 border border-red-200 rounded-lg"
+            className="max-w-2xl mx-auto mb-4 p-3 bg-red-50 border border-red-200 rounded-lg"
           >
             <p className="text-red-600 text-sm">{error}</p>
           </motion.div>
@@ -279,7 +279,7 @@ export default function Pricing() {
             <Loader2 className="w-12 h-12 animate-spin text-indigo-600" />
           </div>
         ) : (
-          <div className="grid md:grid-cols-2 gap-8 max-w-5xl mx-auto">
+          <div className="grid md:grid-cols-2 gap-6 max-w-5xl mx-auto">
             {plans.map((plan, index) => {
             const isCurrentPlan = plan.tier === currentTier;
             const canUpgrade = plan.tier === 'PREMIUM' && currentTier === 'FREE';
@@ -290,7 +290,7 @@ export default function Pricing() {
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.3 + index * 0.1 }}
-                className={`relative bg-white rounded-2xl shadow-lg overflow-hidden border-2 ${
+                className={`relative bg-white rounded-xl shadow-lg overflow-hidden border-2 ${
                   plan.highlighted
                     ? 'border-indigo-500'
                     : isCurrentPlan
@@ -300,37 +300,37 @@ export default function Pricing() {
               >
                 {/* Highlight Badge */}
                 {plan.highlighted && (
-                  <div className="absolute top-0 right-0 bg-gradient-to-r from-indigo-600 to-purple-600 text-white px-4 py-1 text-xs font-bold rounded-bl-lg">
+                  <div className="absolute top-0 right-0 bg-gradient-to-r from-indigo-600 to-purple-600 text-white px-3 py-1 text-xs font-bold rounded-bl-lg">
                     MOST POPULAR
                   </div>
                 )}
 
                 {/* Current Plan Badge */}
                 {isCurrentPlan && (
-                  <div className="absolute top-0 right-0 bg-green-500 text-white px-4 py-1 text-xs font-bold rounded-bl-lg">
+                  <div className="absolute top-0 right-0 bg-green-500 text-white px-3 py-1 text-xs font-bold rounded-bl-lg">
                     CURRENT PLAN
                   </div>
                 )}
 
-                <div className="p-8">
+                <div className="p-6">
                   {/* Plan Header */}
-                  <div className="mb-6">
-                    <h3 className="text-2xl font-bold text-gray-900 mb-2">{plan.name}</h3>
-                    <p className="text-gray-600 text-sm mb-4">{plan.description}</p>
+                  <div className="mb-5">
+                    <h3 className="text-xl font-bold text-gray-900 mb-1.5">{plan.name}</h3>
+                    <p className="text-gray-600 text-sm mb-3">{plan.description}</p>
                     <div className="flex items-baseline gap-2">
-                      <span className="text-5xl font-bold text-gray-900">
+                      <span className="text-4xl font-bold text-gray-900">
                         {plan.currency === 'USD' ? '$' : plan.currency + ' '}{plan.price.toFixed(2)}
                       </span>
-                      <span className="text-gray-600">/ {plan.period}</span>
+                      <span className="text-gray-600 text-sm">/ {plan.period}</span>
                     </div>
                   </div>
 
                   {/* Features List */}
-                  <div className="mb-6 space-y-3">
-                    <p className="text-sm font-semibold text-gray-900 mb-3">What's included:</p>
+                  <div className="mb-5 space-y-2.5">
+                    <p className="text-sm font-semibold text-gray-900 mb-2">What's included:</p>
                     {plan.features.map((feature, idx) => (
-                      <div key={idx} className="flex items-start gap-3">
-                        <Check className="w-5 h-5 text-green-500 flex-shrink-0 mt-0.5" />
+                      <div key={idx} className="flex items-start gap-2.5">
+                        <Check className="w-4 h-4 text-green-500 flex-shrink-0 mt-0.5" />
                         <span className="text-gray-700 text-sm">{feature}</span>
                       </div>
                     ))}
@@ -390,42 +390,42 @@ export default function Pricing() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.5 }}
-          className="mt-16 max-w-3xl mx-auto"
+          className="mt-12 max-w-3xl mx-auto"
         >
-          <h3 className="text-2xl font-bold text-gray-900 mb-6 text-center">
+          <h3 className="text-xl font-bold text-gray-900 mb-4 text-center">
             Frequently Asked Questions
           </h3>
-          <div className="space-y-4">
-            <div className="bg-white rounded-lg p-6 shadow-sm border border-gray-100">
-              <h4 className="font-semibold text-gray-900 mb-2">
+          <div className="space-y-3">
+            <div className="bg-white rounded-lg p-5 shadow-sm border border-gray-100">
+              <h4 className="font-semibold text-gray-900 mb-1.5">
                 Can I cancel my subscription?
               </h4>
               <p className="text-gray-600 text-sm">
-                Yes! You can cancel your Premium subscription anytime from your Profile page. When you cancel, you'll be downgraded to the Free plan with 10 generations per month.
+                Yes! You can cancel your Premium subscription anytime from your Profile page. When you cancel, you'll be downgraded to the Free plan with 5 generations per month.
               </p>
             </div>
-            <div className="bg-white rounded-lg p-6 shadow-sm border border-gray-100">
-              <h4 className="font-semibold text-gray-900 mb-2">
+            <div className="bg-white rounded-lg p-5 shadow-sm border border-gray-100">
+              <h4 className="font-semibold text-gray-900 mb-1.5">
                 Can I switch between plans?
               </h4>
               <p className="text-gray-600 text-sm">
                 Yes! You can upgrade from Free to Premium at any time. Your upgrade takes effect immediately.
               </p>
             </div>
-            <div className="bg-white rounded-lg p-6 shadow-sm border border-gray-100">
-              <h4 className="font-semibold text-gray-900 mb-2">
+            <div className="bg-white rounded-lg p-5 shadow-sm border border-gray-100">
+              <h4 className="font-semibold text-gray-900 mb-1.5">
                 What happens to my usage when I upgrade?
               </h4>
               <p className="text-gray-600 text-sm">
                 When you upgrade to Premium, your monthly limit increases to 100 generations immediately. Your current month's usage carries over.
               </p>
             </div>
-            <div className="bg-white rounded-lg p-6 shadow-sm border border-gray-100">
-              <h4 className="font-semibold text-gray-900 mb-2">
+            <div className="bg-white rounded-lg p-5 shadow-sm border border-gray-100">
+              <h4 className="font-semibold text-gray-900 mb-1.5">
                 How does billing work?
               </h4>
               <p className="text-gray-600 text-sm">
-                Premium is billed monthly at $9.99/month. Your subscription automatically renews each month until you cancel.
+                Premium is billed monthly at $4.99/month. Your subscription automatically renews each month until you cancel.
               </p>
             </div>
           </div>
@@ -443,20 +443,20 @@ export default function Pricing() {
           <motion.div
             initial={{ scale: 0.95, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
-            className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6"
+            className="bg-white rounded-xl shadow-2xl max-w-md w-full p-6"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="text-center mb-6">
-              <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                <Crown className="w-8 h-8 text-red-600" />
+            <div className="text-center mb-5">
+              <div className="w-14 h-14 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-3">
+                <Crown className="w-7 h-7 text-red-600" />
               </div>
-              <h3 className="text-2xl font-bold text-gray-900 mb-2">Cancel Premium?</h3>
-              <p className="text-gray-600">
+              <h3 className="text-xl font-bold text-gray-900 mb-2">Cancel Premium?</h3>
+              <p className="text-sm text-gray-600">
                 Are you sure you want to cancel your Premium subscription?
               </p>
             </div>
 
-            <div className="bg-gray-50 rounded-lg p-4 mb-6 space-y-2">
+            <div className="bg-gray-50 rounded-lg p-3 mb-5 space-y-1.5">
               <div className="flex items-start gap-2 text-sm text-gray-700">
                 <span className="text-red-500 font-bold">✗</span>
                 <span>Monthly limit reduced to 10 generations</span>

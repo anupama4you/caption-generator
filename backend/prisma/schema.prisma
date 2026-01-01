@@ -96,7 +96,7 @@ model UsageTracking {
   captionsGenerated Int @default(0)
 
   // Limits based on tier
-  monthlyLimit Int // 10 for FREE, 100 for PREMIUM
+  monthlyLimit Int // 5 for FREE, 100 for PREMIUM
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt

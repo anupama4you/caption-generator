@@ -4,7 +4,7 @@ import { useDispatch } from 'react-redux';
 import { Sparkles } from 'lucide-react';
 import api from '../services/api';
 import { setUser } from '../store/authSlice';
-import mainLogo from '../assets/images/main-logo.png';
+import mainLogo from '../assets/images/main-logo.svg';
 
 export default function Register() {
   const [name, setName] = useState('');
@@ -47,11 +47,6 @@ export default function Register() {
               className="h-16 w-auto object-contain drop-shadow-md"
             />
           </Link>
-          <div className="flex items-center justify-center gap-2 mb-2">
-            <Sparkles className="w-6 h-6 text-indigo-600" />
-            <h2 className="text-3xl font-bold text-gray-900">Create Your Account</h2>
-          </div>
-          <p className="text-gray-600 text-sm">Start generating amazing captions today</p>
         </div>
 
         {error && (

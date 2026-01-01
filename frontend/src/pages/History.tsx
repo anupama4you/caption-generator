@@ -249,24 +249,24 @@ export default function History() {
           </div>
         </nav>
 
-        <main className="container mx-auto px-4 sm:px-6 py-8">
+        <main className="container mx-auto px-4 sm:px-6 py-4 max-w-7xl">
           {/* Attempt Header */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            className="bg-white rounded-2xl shadow-lg p-6 mb-8 border border-gray-100"
+            className="bg-white rounded-xl shadow-lg p-5 mb-6 border border-gray-100"
           >
-            <div className="flex items-start justify-between mb-4">
-              <div className="flex items-center gap-3">
+            <div className="flex items-start justify-between mb-3">
+              <div className="flex items-center gap-2">
                 {(() => {
                   return contentArt(selectedAttempt.contentFormat);
                 })()}
                 <div>
-                  <h2 className="text-2xl font-bold text-gray-900">
+                  <h2 className="text-xl font-bold text-gray-900">
                     {selectedAttempt.contentFormat.replace(/_/g, ' ').toUpperCase()}
                   </h2>
-                  <p className="text-sm text-gray-500 flex items-center gap-2 mt-1">
-                    <Calendar className="w-4 h-4" />
+                  <p className="text-xs text-gray-500 flex items-center gap-1 mt-0.5">
+                    <Calendar className="w-3 h-3" />
                     {new Date(selectedAttempt.createdAt).toLocaleString()}
                   </p>
                 </div>
@@ -283,12 +283,12 @@ export default function History() {
               </button>
             </div>
 
-            <div className="bg-gray-50 rounded-xl p-4">
-              <p className="text-sm font-medium text-gray-700 mb-2">Content Description:</p>
-              <p className="text-gray-900">{selectedAttempt.contentDescription}</p>
+            <div className="bg-gray-50 rounded-lg p-3">
+              <p className="text-xs font-medium text-gray-700 mb-1">Content Description:</p>
+              <p className="text-sm text-gray-900">{selectedAttempt.contentDescription}</p>
             </div>
 
-            <div className="mt-4 flex flex-wrap gap-2">
+            <div className="mt-3 flex flex-wrap gap-2">
               <span className="px-3 py-1 bg-indigo-100 text-indigo-700 rounded-full text-sm font-medium">
                 {Object.keys(groupedByPlatform).length} Platforms
               </span>
@@ -299,7 +299,7 @@ export default function History() {
           </motion.div>
 
           {/* Platforms Grid */}
-          <div className="space-y-6">
+          <div className="space-y-4">
             {Object.entries(groupedByPlatform).map(([platform, captions], index) => {
               const platformMeta = PLATFORMS.find(p => p.value === platform);
 
@@ -309,7 +309,7 @@ export default function History() {
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: index * 0.1 }}
-                  className="bg-white rounded-2xl shadow-lg p-6 border border-gray-100"
+                  className="bg-white rounded-xl shadow-lg p-5 border border-gray-100"
                 >
                   {/* Platform Header */}
                   <div className="flex items-center gap-3 mb-4 pb-4 border-b border-gray-100">
@@ -916,11 +916,11 @@ export default function History() {
     <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-purple-50">
       <Navbar />
 
-      <main className="container mx-auto px-4 sm:px-6 py-8">
+      <main className="container mx-auto px-4 sm:px-6 py-4 max-w-7xl">
         {/* Page Header */}
-        <div className="flex items-center gap-2 mb-6">
+        <div className="flex items-center gap-2 mb-4">
           <Clock className="w-6 h-6 text-indigo-600" />
-          <h1 className="text-xl sm:text-2xl font-bold bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">
+          <h1 className="text-2xl font-bold text-gray-900">
             Generation History
           </h1>
         </div>
@@ -940,7 +940,7 @@ export default function History() {
           <motion.div
             initial={{ opacity: 0, scale: 0.9 }}
             animate={{ opacity: 1, scale: 1 }}
-            className="bg-white rounded-2xl shadow-lg p-12 text-center"
+            className="bg-white rounded-xl shadow-lg p-10 text-center"
           >
             <Sparkles className="w-16 h-16 text-gray-300 mx-auto mb-4" />
             <h3 className="text-xl font-semibold text-gray-700 mb-2">No History Yet</h3>
@@ -954,7 +954,7 @@ export default function History() {
             </Link>
           </motion.div>
         ) : (
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
             <AnimatePresence>
               {attempts.map((attempt, index) => {
                 const platformCount = new Set(attempt.captions?.map(c => c.platform) || []).size;
@@ -967,10 +967,10 @@ export default function History() {
                     exit={{ opacity: 0, scale: 0.9 }}
                     transition={{ delay: index * 0.05 }}
                     whileHover={{ scale: 1.02 }}
-                    className="bg-white rounded-2xl shadow-lg p-6 border border-gray-100 hover:border-indigo-200 transition-all cursor-pointer"
+                    className="bg-white rounded-xl shadow-lg p-5 border border-gray-100 hover:border-indigo-200 transition-all cursor-pointer"
                     onClick={() => viewDetails(attempt.id)}
                   >
-                    <div className="flex justify-between items-start mb-4">
+                    <div className="flex justify-between items-start mb-3">
                       <div className="flex items-center gap-3">
                         <div className="p-2 bg-indigo-50 rounded-lg">{contentArt(attempt.contentFormat)}</div>
                         <div>
