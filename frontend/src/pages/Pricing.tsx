@@ -80,6 +80,10 @@ export default function Pricing() {
   const [successMessage, setSuccessMessage] = useState('');
   const [plans, setPlans] = useState<PlanType[]>(DEFAULT_PLANS);
   const [pricingLoading, setPricingLoading] = useState(true);
+  const [billingInterval, setBillingInterval] = useState<'monthly' | 'yearly'>('monthly');
+  const [monthlyPrice, setMonthlyPrice] = useState(4.99);
+  const [yearlyPrice, setYearlyPrice] = useState(49.99);
+  const [currency, setCurrency] = useState('AUD');
 
   const currentTier = user?.subscriptionTier || 'FREE';
 
@@ -91,9 +95,14 @@ export default function Pricing() {
         const response = await api.get('/payment/pricing');
 
         if (response.data.success) {
-          const { premium, free } = response.data.pricing;
+          const { monthly, yearly, free } = response.data.pricing;
 
-          // Update plans with actual Stripe pricing
+          // Store monthly and yearly prices
+          setMonthlyPrice(monthly.amount);
+          setYearlyPrice(yearly.amount);
+          setCurrency(monthly.currency);
+
+          // Update plans with actual Stripe pricing (monthly by default)
           setPlans([
             {
               ...DEFAULT_PLANS[0],
@@ -102,10 +111,10 @@ export default function Pricing() {
             },
             {
               ...DEFAULT_PLANS[1],
-              price: premium.amount,
-              period: premium.interval,
-              currency: premium.currency,
-              name: premium.name,
+              price: monthly.amount,
+              period: monthly.interval,
+              currency: monthly.currency,
+              name: monthly.name,
             },
           ]);
         }
@@ -168,8 +177,10 @@ export default function Pricing() {
     setError('');
 
     try {
-      // Create Stripe checkout session
-      const response = await api.post('/payment/create-checkout-session');
+      // Create Stripe checkout session with billing interval
+      const response = await api.post('/payment/create-checkout-session', {
+        billingInterval,
+      });
       const { url } = response.data;
 
       if (url) {
@@ -273,6 +284,40 @@ export default function Pricing() {
           </motion.div>
         )}
 
+        {/* Billing Interval Toggle */}
+        <motion.div
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.3 }}
+          className="flex justify-center mb-8"
+        >
+          <div className="inline-flex items-center bg-white rounded-lg p-1 shadow-md border border-gray-200">
+            <button
+              onClick={() => setBillingInterval('monthly')}
+              className={`px-6 py-2.5 rounded-md transition-all font-semibold text-sm ${
+                billingInterval === 'monthly'
+                  ? 'bg-gradient-to-r from-indigo-600 to-purple-600 text-white shadow-md'
+                  : 'text-gray-600 hover:text-gray-900'
+              }`}
+            >
+              Monthly
+            </button>
+            <button
+              onClick={() => setBillingInterval('yearly')}
+              className={`px-6 py-2.5 rounded-md transition-all font-semibold text-sm relative ${
+                billingInterval === 'yearly'
+                  ? 'bg-gradient-to-r from-indigo-600 to-purple-600 text-white shadow-md'
+                  : 'text-gray-600 hover:text-gray-900'
+              }`}
+            >
+              Yearly
+              <span className="ml-2 inline-flex items-center px-2 py-0.5 rounded-full text-xs font-bold bg-green-500 text-white">
+                Save {Math.round(((monthlyPrice * 12 - yearlyPrice) / (monthlyPrice * 12)) * 100)}%
+              </span>
+            </button>
+          </div>
+        </motion.div>
+
         {/* Pricing Cards */}
         {pricingLoading ? (
           <div className="flex justify-center items-center py-20">
@@ -319,10 +364,26 @@ export default function Pricing() {
                     <p className="text-gray-600 text-sm mb-3">{plan.description}</p>
                     <div className="flex items-baseline gap-2">
                       <span className="text-4xl font-bold text-gray-900">
-                        {plan.currency === 'USD' ? '$' : plan.currency + ' '}{plan.price.toFixed(2)}
+                        {plan.tier === 'PREMIUM' ? (
+                          <>
+                            {currency === 'USD' ? '$' : currency + ' '}
+                            {billingInterval === 'yearly' ? yearlyPrice.toFixed(2) : monthlyPrice.toFixed(2)}
+                          </>
+                        ) : (
+                          <>
+                            {plan.currency === 'USD' ? '$' : plan.currency + ' '}{plan.price.toFixed(2)}
+                          </>
+                        )}
                       </span>
-                      <span className="text-gray-600 text-sm">/ {plan.period}</span>
+                      <span className="text-gray-600 text-sm">
+                        / {plan.tier === 'PREMIUM' ? (billingInterval === 'yearly' ? 'year' : 'month') : plan.period}
+                      </span>
                     </div>
+                    {plan.tier === 'PREMIUM' && billingInterval === 'yearly' && (
+                      <p className="text-green-600 text-sm mt-2 font-medium">
+                        {currency === 'USD' ? '$' : currency + ' '}{(yearlyPrice / 12).toFixed(2)}/month when billed annually
+                      </p>
+                    )}
                   </div>
 
                   {/* Features List */}

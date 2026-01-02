@@ -12,21 +12,28 @@ export class PaymentController {
     try {
       const userId = req.user?.id;
       const userEmail = req.user?.email;
+      const { billingInterval = 'monthly' } = req.body;
 
       if (!userId || !userEmail) {
         return res.status(401).json({ error: 'Unauthorized' });
+      }
+
+      // Validate billing interval
+      if (billingInterval !== 'monthly' && billingInterval !== 'yearly') {
+        return res.status(400).json({ error: 'Invalid billing interval. Must be "monthly" or "yearly"' });
       }
 
       // Create success and cancel URLs
       const successUrl = `${config.frontendUrl}/pricing?session_id={CHECKOUT_SESSION_ID}&success=true`;
       const cancelUrl = `${config.frontendUrl}/pricing?canceled=true`;
 
-      // Create checkout session
+      // Create checkout session with billing interval
       const session = await stripeService.createCheckoutSession(
         userId,
         userEmail,
         successUrl,
-        cancelUrl
+        cancelUrl,
+        billingInterval as 'monthly' | 'yearly'
       );
 
       return res.status(200).json({
@@ -122,24 +129,30 @@ export class PaymentController {
   }
 
   /**
-   * Get Premium pricing from Stripe
+   * Get Premium pricing from Stripe (both monthly and yearly)
    */
   async getPricing(_req: AuthRequest, res: Response): Promise<Response> {
     try {
-      const pricing = await stripeService.getPremiumPrice();
+      const pricing = await stripeService.getPremiumPricing();
 
       return res.status(200).json({
         success: true,
         pricing: {
-          premium: {
-            amount: pricing.amount,
-            currency: pricing.currency,
-            interval: pricing.interval,
-            name: pricing.productName,
+          monthly: {
+            amount: pricing.monthly.amount,
+            currency: pricing.monthly.currency,
+            interval: pricing.monthly.interval,
+            name: pricing.monthly.productName,
+          },
+          yearly: {
+            amount: pricing.yearly.amount,
+            currency: pricing.yearly.currency,
+            interval: pricing.yearly.interval,
+            name: pricing.yearly.productName,
           },
           free: {
             amount: 0,
-            currency: pricing.currency,
+            currency: pricing.monthly.currency,
             interval: 'forever',
             name: 'Free',
           },

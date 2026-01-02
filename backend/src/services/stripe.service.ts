@@ -18,14 +18,24 @@ export class StripeService {
     userId: string,
     userEmail: string,
     successUrl: string,
-    cancelUrl: string
+    cancelUrl: string,
+    billingInterval: 'monthly' | 'yearly' = 'monthly'
   ): Promise<Stripe.Checkout.Session> {
     try {
+      // Select the correct price ID based on billing interval
+      const priceId = billingInterval === 'yearly'
+        ? config.stripePriceIdYearly
+        : config.stripePriceIdMonthly;
+
+      if (!priceId) {
+        throw new Error(`No price ID configured for ${billingInterval} billing`);
+      }
+
       const session = await stripe.checkout.sessions.create({
         payment_method_types: ['card'],
         line_items: [
           {
-            price: config.stripePriceId,
+            price: priceId,
             quantity: 1,
           },
         ],
@@ -36,10 +46,12 @@ export class StripeService {
         client_reference_id: userId,
         metadata: {
           userId,
+          billingInterval,
         },
         subscription_data: {
           metadata: {
             userId,
+            billingInterval,
           },
         },
       });
@@ -107,7 +119,56 @@ export class StripeService {
   }
 
   /**
-   * Get Premium price details from Stripe
+   * Get Premium price details from Stripe (both monthly and yearly)
+   */
+  async getPremiumPricing(): Promise<{
+    monthly: { amount: number; currency: string; interval: string; productName: string };
+    yearly: { amount: number; currency: string; interval: string; productName: string };
+  }> {
+    try {
+      // Fetch both monthly and yearly prices
+      const [monthlyPrice, yearlyPrice] = await Promise.all([
+        stripe.prices.retrieve(config.stripePriceIdMonthly, { expand: ['product'] }),
+        config.stripePriceIdYearly
+          ? stripe.prices.retrieve(config.stripePriceIdYearly, { expand: ['product'] })
+          : null,
+      ]);
+
+      const monthlyProduct = monthlyPrice.product as Stripe.Product;
+      const yearlyProduct = yearlyPrice?.product as Stripe.Product | undefined;
+
+      return {
+        monthly: {
+          amount: (monthlyPrice.unit_amount || 0) / 100,
+          currency: monthlyPrice.currency.toUpperCase(),
+          interval: 'month',
+          productName: monthlyProduct.name || 'Premium Monthly',
+        },
+        yearly: yearlyPrice
+          ? {
+              amount: (yearlyPrice.unit_amount || 0) / 100,
+              currency: yearlyPrice.currency.toUpperCase(),
+              interval: 'year',
+              productName: yearlyProduct?.name || 'Premium Yearly',
+            }
+          : {
+              amount: ((monthlyPrice.unit_amount || 0) / 100) * 10, // Default: 10 months for 12
+              currency: monthlyPrice.currency.toUpperCase(),
+              interval: 'year',
+              productName: 'Premium Yearly',
+            },
+      };
+    } catch (error) {
+      console.error('Error retrieving prices:', error);
+      return {
+        monthly: { amount: 4.99, currency: 'AUD', interval: 'month', productName: 'Premium Monthly' },
+        yearly: { amount: 49.99, currency: 'AUD', interval: 'year', productName: 'Premium Yearly' },
+      };
+    }
+  }
+
+  /**
+   * Get Premium price details from Stripe (legacy method for backwards compatibility)
    */
   async getPremiumPrice(): Promise<{
     amount: number;
@@ -115,31 +176,8 @@ export class StripeService {
     interval: string;
     productName: string;
   }> {
-    try {
-      // Retrieve the price object
-      const price = await stripe.prices.retrieve(config.stripePriceId, {
-        expand: ['product'],
-      });
-
-      // Extract product details
-      const product = price.product as Stripe.Product;
-
-      return {
-        amount: (price.unit_amount || 0) / 100, // Convert cents to dollars
-        currency: price.currency.toUpperCase(),
-        interval: price.recurring?.interval || 'month',
-        productName: product.name || 'Premium',
-      };
-    } catch (error) {
-      console.error('Error retrieving price:', error);
-      // Return default values if Stripe call fails
-      return {
-        amount: 9.99,
-        currency: 'USD',
-        interval: 'month',
-        productName: 'Premium',
-      };
-    }
+    const pricing = await this.getPremiumPricing();
+    return pricing.monthly;
   }
 }
 

@@ -14,7 +14,9 @@ export const config = {
   rateLimitMaxRequests: parseInt(process.env.RATE_LIMIT_MAX_REQUESTS || '100'),
   stripeSecretKey: process.env.STRIPE_SECRET_KEY || '',
   stripeWebhookSecret: process.env.STRIPE_WEBHOOK_SECRET || '',
-  stripePriceId: process.env.STRIPE_PRICE_ID || '',
+  stripePriceId: process.env.STRIPE_PRICE_ID || '', // Legacy - kept for backwards compatibility
+  stripePriceIdMonthly: process.env.STRIPE_PREMIUM_MONTHLY_PRICE_ID || process.env.STRIPE_PRICE_ID || '',
+  stripePriceIdYearly: process.env.STRIPE_PREMIUM_YEARLY_PRICE_ID || '',
 };
 
 // Validate required environment variables
