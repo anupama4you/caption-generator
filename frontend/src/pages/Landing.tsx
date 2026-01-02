@@ -9,27 +9,28 @@ import step2Image from '../assets/images/generated_captions.png';
 import step3Image from '../assets/images/copy_and_paste.png';
 import api from '../services/api';
 
-interface PricingData {
-  premium: {
-    amount: number;
-    currency: string;
-    interval: string;
-    name: string;
-  };
-  free: {
-    amount: number;
-    currency: string;
-    interval: string;
-    name: string;
-  };
+interface PlanPricing {
+  amount: number;
+  currency: string;
+  interval: string;
+  name: string;
 }
+
+interface PricingData {
+  monthly: PlanPricing;
+  yearly: PlanPricing;
+  free: PlanPricing;
+}
+
+const DEFAULT_PRICING: PricingData = {
+  monthly: { amount: 4.99, currency: 'AUD', interval: 'month', name: 'Premium Monthly' },
+  yearly: { amount: 49.99, currency: 'AUD', interval: 'year', name: 'Premium Yearly' },
+  free: { amount: 0, currency: 'AUD', interval: 'forever', name: 'Free' },
+};
 
 export default function Landing() {
   // Initialize with default pricing for instant display
-  const [pricing, setPricing] = useState<PricingData>({
-    premium: { amount: 9.99, currency: 'USD', interval: 'month', name: 'Premium' },
-    free: { amount: 0, currency: 'USD', interval: 'forever', name: 'Free' },
-  });
+  const [pricing, setPricing] = useState<PricingData>(DEFAULT_PRICING);
 
   // Fetch actual pricing from Stripe in the background
   useEffect(() => {
@@ -37,8 +38,14 @@ export default function Landing() {
       try {
         const response = await api.get('/payment/pricing');
 
-        if (response?.data?.success) {
-          setPricing(response.data.pricing);
+        if (response?.data?.success && response?.data?.pricing) {
+          const { monthly, yearly, free } = response.data.pricing;
+
+          setPricing({
+            monthly: monthly || DEFAULT_PRICING.monthly,
+            yearly: yearly || DEFAULT_PRICING.yearly,
+            free: free || DEFAULT_PRICING.free,
+          });
         }
       } catch (err) {
         console.error('Failed to fetch pricing:', err);
@@ -48,6 +55,10 @@ export default function Landing() {
 
     fetchPricing();
   }, []);
+
+  const formatCurrency = (plan: PlanPricing) => (plan.currency === 'USD' ? '$' : `${plan.currency} `);
+  const formatAmount = (amount: number) => (Number.isInteger(amount) ? amount.toFixed(0) : amount.toFixed(2));
+  const { free: freePlan, monthly: monthlyPlan, yearly: yearlyPlan } = pricing;
 
   const fadeInUp = {
     hidden: { opacity: 0, y: 20 },
@@ -459,10 +470,10 @@ export default function Landing() {
                     </p>
                     <div className="flex items-baseline gap-2">
                       <span className="text-6xl font-bold text-gray-900">
-                        {pricing.free.currency === 'USD' ? '$' : pricing.free.currency + ' '}
-                        {pricing.free.amount.toFixed(0)}
+                        {formatCurrency(freePlan)}
+                        {formatAmount(freePlan.amount)}
                       </span>
-                      <span className="text-gray-600 text-lg">/ {pricing.free.interval}</span>
+                      <span className="text-gray-600 text-lg">/ {freePlan.interval}</span>
                     </div>
                   </div>
 
@@ -514,10 +525,13 @@ export default function Landing() {
                     </p>
                     <div className="flex items-baseline gap-2">
                       <span className="text-6xl font-bold text-white">
-                        {pricing.premium.currency === 'USD' ? '$' : pricing.premium.currency + ' '}
-                        {pricing.premium.amount.toFixed(2)}
+                        {formatCurrency(monthlyPlan)}
+                        {formatAmount(monthlyPlan.amount)}
                       </span>
-                      <span className="text-indigo-100 text-lg">/ {pricing.premium.interval}</span>
+                      <span className="text-indigo-100 text-lg">/ {monthlyPlan.interval}</span>
+                    </div>
+                    <div className="mt-2 text-indigo-100 text-sm">
+                      Or save with {formatCurrency(yearlyPlan)}{formatAmount(yearlyPlan.amount)} / {yearlyPlan.interval}
                     </div>
                   </div>
 
