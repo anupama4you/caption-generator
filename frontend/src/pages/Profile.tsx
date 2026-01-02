@@ -1,5 +1,5 @@
 import { useState, useEffect, FormEvent } from 'react';
-import { Link, useNavigate, useLocation } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { useSelector } from 'react-redux';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Sparkles, Save, Settings, User as UserIcon, Zap, Hash, Crown, Loader2, X, AlertTriangle } from 'lucide-react';
@@ -10,7 +10,6 @@ import Navbar from '../components/Navbar';
 export default function Profile() {
   const { user } = useSelector((state: RootState) => state.auth);
   const navigate = useNavigate();
-  const location = useLocation();
 
   const [niche, setNiche] = useState('');
   const [brandVoice, setBrandVoice] = useState('');

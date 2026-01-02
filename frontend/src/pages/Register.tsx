@@ -1,7 +1,6 @@
 import { useState, FormEvent } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useDispatch } from 'react-redux';
-import { Sparkles } from 'lucide-react';
 import api from '../services/api';
 import { setUser } from '../store/authSlice';
 import mainLogo from '../assets/images/main-logo.svg';

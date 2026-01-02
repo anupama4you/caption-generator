@@ -1,9 +1,9 @@
 import { useState, useEffect } from 'react';
-import { Link, useSearchParams } from 'react-router-dom';
+import { useSearchParams } from 'react-router-dom';
 import { useSelector, useDispatch } from 'react-redux';
 import { motion } from 'framer-motion';
 import {
-  Check, Zap, Crown, ArrowLeft, Loader2
+  Check, Zap, Crown, Loader2
 } from 'lucide-react';
 import { RootState } from '../store/store';
 import { setUser } from '../store/authSlice';
