@@ -77,20 +77,24 @@ const platformArt = (platform: Platform) => {
 // Maximum platforms allowed for free users
 const MAX_FREE_PLATFORMS = 2;
 
-interface PricingData {
-  premium: {
-    amount: number;
-    currency: string;
-    interval: string;
-    name: string;
-  };
-  free: {
-    amount: number;
-    currency: string;
-    interval: string;
-    name: string;
-  };
+interface PlanPricing {
+  amount: number;
+  currency: string;
+  interval: string;
+  name: string;
 }
+
+interface PricingData {
+  monthly: PlanPricing;
+  yearly: PlanPricing;
+  free: PlanPricing;
+}
+
+const DEFAULT_PRICING: PricingData = {
+  monthly: { amount: 4.99, currency: 'AUD', interval: 'month', name: 'Premium Monthly' },
+  yearly: { amount: 49.99, currency: 'AUD', interval: 'year', name: 'Premium Yearly' },
+  free: { amount: 0, currency: 'AUD', interval: 'forever', name: 'Free' },
+};
 
 export default function Dashboard() {
   const { user } = useSelector((state: RootState) => state.auth);
@@ -100,7 +104,7 @@ export default function Dashboard() {
     'tiktok',
   ]);
   const [contentType, setContentType] = useState<ContentType>('short_video');
-  const [pricing, setPricing] = useState<PricingData | null>(null);
+  const [pricing, setPricing] = useState<PricingData>(DEFAULT_PRICING);
   const [description, setDescription] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -109,6 +113,8 @@ export default function Dashboard() {
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [expandedAnalytics, setExpandedAnalytics] = useState<Record<string, boolean>>({});
   const [currentSlide, setCurrentSlide] = useState<Record<string, number>>({});
+  const formatCurrency = (plan: PlanPricing) => (plan.currency === 'USD' ? '$' : `${plan.currency} `);
+  const formatAmount = (amount: number) => (Number.isInteger(amount) ? amount.toFixed(0) : amount.toFixed(2));
 
   // Get available platforms based on content type
   const getAvailablePlatforms = () => {
@@ -156,16 +162,18 @@ export default function Dashboard() {
   const fetchPricing = async () => {
     try {
       const response = await api.get('/payment/pricing');
-      if (response?.data?.success) {
-        setPricing(response.data.pricing);
+      if (response?.data?.success && response?.data?.pricing) {
+        const { monthly, yearly, free } = response.data.pricing;
+        setPricing({
+          monthly: monthly || DEFAULT_PRICING.monthly,
+          yearly: yearly || DEFAULT_PRICING.yearly,
+          free: free || DEFAULT_PRICING.free,
+        });
       }
     } catch (err) {
       console.error('Failed to fetch pricing:', err);
       // Set default pricing as fallback
-      setPricing({
-        premium: { amount: 9.99, currency: 'USD', interval: 'month', name: 'Premium' },
-        free: { amount: 0, currency: 'USD', interval: 'forever', name: 'Free' },
-      });
+      setPricing(DEFAULT_PRICING);
     }
   };
 
@@ -282,7 +290,7 @@ export default function Dashboard() {
                   to="/pricing"
                   className="bg-white text-indigo-600 px-4 py-2 rounded-lg font-semibold text-sm hover:bg-indigo-50 transition-all whitespace-nowrap"
                 >
-                  {pricing ? `$${pricing.premium.amount.toFixed(2)}/mo` : '$9.99/mo'}
+                  {`${formatCurrency(pricing.monthly)}${formatAmount(pricing.monthly.amount)}/${pricing.monthly.interval}`}
                 </Link>
               </motion.div>
             )}

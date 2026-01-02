@@ -10,6 +10,25 @@ import { setUser } from '../store/authSlice';
 import api from '../services/api';
 import Navbar from '../components/Navbar';
 
+interface PlanPricing {
+  amount: number;
+  currency: string;
+  interval: string;
+  name: string;
+}
+
+interface PricingData {
+  monthly: PlanPricing;
+  yearly: PlanPricing;
+  free: PlanPricing;
+}
+
+const DEFAULT_PRICING: PricingData = {
+  monthly: { amount: 4.99, currency: 'AUD', interval: 'month', name: 'Premium Monthly' },
+  yearly: { amount: 49.99, currency: 'AUD', interval: 'year', name: 'Premium Yearly' },
+  free: { amount: 0, currency: 'AUD', interval: 'forever', name: 'Free' },
+};
+
 interface PlanType {
   name: string;
   tier: 'FREE' | 'PREMIUM';
@@ -29,7 +48,7 @@ const DEFAULT_PLANS: PlanType[] = [
     tier: 'FREE',
     price: 0,
     period: 'forever',
-    currency: 'USD',
+    currency: DEFAULT_PRICING.free.currency,
     description: 'Perfect for trying out our caption generator',
     features: [
       '5 caption generations per month',
@@ -47,11 +66,11 @@ const DEFAULT_PLANS: PlanType[] = [
     highlighted: false,
   },
   {
-    name: 'Premium',
+    name: DEFAULT_PRICING.monthly.name,
     tier: 'PREMIUM',
-    price: 9.99,
-    period: 'month',
-    currency: 'USD',
+    price: DEFAULT_PRICING.monthly.amount,
+    period: DEFAULT_PRICING.monthly.interval,
+    currency: DEFAULT_PRICING.monthly.currency,
     description: 'For serious content creators and businesses',
     features: [
       '100 caption generations per month',
@@ -81,9 +100,14 @@ export default function Pricing() {
   const [plans, setPlans] = useState<PlanType[]>(DEFAULT_PLANS);
   const [pricingLoading, setPricingLoading] = useState(true);
   const [billingInterval, setBillingInterval] = useState<'monthly' | 'yearly'>('monthly');
-  const [monthlyPrice, setMonthlyPrice] = useState(4.99);
-  const [yearlyPrice, setYearlyPrice] = useState(49.99);
-  const [currency, setCurrency] = useState('AUD');
+  const [monthlyPrice, setMonthlyPrice] = useState(DEFAULT_PRICING.monthly.amount);
+  const [yearlyPrice, setYearlyPrice] = useState(DEFAULT_PRICING.yearly.amount);
+  const [currency, setCurrency] = useState(DEFAULT_PRICING.monthly.currency);
+  const formatCurrency = (curr: string) => (curr === 'USD' ? '$' : `${curr} `);
+  const formatAmount = (amount: number) => (Number.isInteger(amount) ? amount.toFixed(0) : amount.toFixed(2));
+  const savingsPercent = monthlyPrice
+    ? Math.max(0, Math.round(((monthlyPrice * 12 - yearlyPrice) / (monthlyPrice * 12)) * 100))
+    : 0;
 
   const currentTier = user?.subscriptionTier || 'FREE';
 
@@ -94,27 +118,27 @@ export default function Pricing() {
         setPricingLoading(true);
         const response = await api.get('/payment/pricing');
 
-        if (response.data.success) {
-          const { monthly, yearly, free } = response.data.pricing;
+        if (response?.data?.success && response?.data?.pricing) {
+          const { monthly, yearly, free } = response.data.pricing as PricingData;
 
           // Store monthly and yearly prices
-          setMonthlyPrice(monthly.amount);
-          setYearlyPrice(yearly.amount);
-          setCurrency(monthly.currency);
+          setMonthlyPrice(monthly?.amount ?? DEFAULT_PRICING.monthly.amount);
+          setYearlyPrice(yearly?.amount ?? DEFAULT_PRICING.yearly.amount);
+          setCurrency(monthly?.currency ?? DEFAULT_PRICING.monthly.currency);
 
           // Update plans with actual Stripe pricing (monthly by default)
           setPlans([
             {
               ...DEFAULT_PLANS[0],
-              price: free.amount,
-              currency: free.currency,
+              price: free?.amount ?? DEFAULT_PRICING.free.amount,
+              currency: free?.currency ?? DEFAULT_PRICING.free.currency,
             },
             {
               ...DEFAULT_PLANS[1],
-              price: monthly.amount,
-              period: monthly.interval,
-              currency: monthly.currency,
-              name: monthly.name,
+              price: monthly?.amount ?? DEFAULT_PRICING.monthly.amount,
+              period: monthly?.interval ?? DEFAULT_PRICING.monthly.interval,
+              currency: monthly?.currency ?? DEFAULT_PRICING.monthly.currency,
+              name: monthly?.name ?? DEFAULT_PRICING.monthly.name,
             },
           ]);
         }
@@ -312,7 +336,7 @@ export default function Pricing() {
             >
               Yearly
               <span className="ml-2 inline-flex items-center px-2 py-0.5 rounded-full text-xs font-bold bg-green-500 text-white">
-                Save {Math.round(((monthlyPrice * 12 - yearlyPrice) / (monthlyPrice * 12)) * 100)}%
+                Save {savingsPercent}%
               </span>
             </button>
           </div>
@@ -366,12 +390,13 @@ export default function Pricing() {
                       <span className="text-4xl font-bold text-gray-900">
                         {plan.tier === 'PREMIUM' ? (
                           <>
-                            {currency === 'USD' ? '$' : currency + ' '}
-                            {billingInterval === 'yearly' ? yearlyPrice.toFixed(2) : monthlyPrice.toFixed(2)}
+                            {formatCurrency(currency)}
+                            {formatAmount(billingInterval === 'yearly' ? yearlyPrice : monthlyPrice)}
                           </>
                         ) : (
                           <>
-                            {plan.currency === 'USD' ? '$' : plan.currency + ' '}{plan.price.toFixed(2)}
+                            {formatCurrency(plan.currency || currency)}
+                            {formatAmount(plan.price)}
                           </>
                         )}
                       </span>
@@ -381,7 +406,7 @@ export default function Pricing() {
                     </div>
                     {plan.tier === 'PREMIUM' && billingInterval === 'yearly' && (
                       <p className="text-green-600 text-sm mt-2 font-medium">
-                        {currency === 'USD' ? '$' : currency + ' '}{(yearlyPrice / 12).toFixed(2)}/month when billed annually
+                        {formatCurrency(currency)}{formatAmount(yearlyPrice / 12)}/month when billed annually
                       </p>
                     )}
                   </div>
@@ -486,7 +511,7 @@ export default function Pricing() {
                 How does billing work?
               </h4>
               <p className="text-gray-600 text-sm">
-                Premium is billed monthly at $4.99/month. Your subscription automatically renews each month until you cancel.
+                Premium is billed monthly at {formatCurrency(currency)}{formatAmount(monthlyPrice)}/month. Your subscription automatically renews until you cancel.
               </p>
             </div>
           </div>
