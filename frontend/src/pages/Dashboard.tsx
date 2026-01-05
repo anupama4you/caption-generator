@@ -117,6 +117,8 @@ export default function Dashboard() {
   const [currentSlide, setCurrentSlide] = useState<Record<string, number>>({});
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [showRegisterModal, setShowRegisterModal] = useState(false);
+  const [isGuestGeneration, setIsGuestGeneration] = useState(false);
+  const [isLimitError, setIsLimitError] = useState(false);
   const formatCurrency = (plan: PlanPricing) => (plan.currency === 'USD' ? '$' : `${plan.currency} `);
   const formatAmount = (amount: number) => (Number.isInteger(amount) ? amount.toFixed(0) : amount.toFixed(2));
 
@@ -204,6 +206,7 @@ export default function Dashboard() {
   const handleGenerate = async (e: FormEvent) => {
     e.preventDefault();
     setError('');
+    setIsLimitError(false);
     setLoading(true);
     setCopiedId(null);
 
@@ -217,6 +220,9 @@ export default function Dashboard() {
       // Response is an attempt with captions array
       const attempt = response.data.data;
       setGeneratedCaptions(attempt.captions || []);
+
+      // Track whether this was a guest generation
+      setIsGuestGeneration(!user && response.data.isGuest === true);
 
       // Only fetch usage for authenticated users
       if (user) {
@@ -326,7 +332,11 @@ export default function Dashboard() {
                     initial={{ opacity: 0, y: -10 }}
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0, y: -10 }}
-                    className="bg-red-50 border border-red-200 text-red-700 px-4 py-2 rounded-lg mb-4 text-sm"
+                    className={`${
+                      isLimitError
+                        ? 'bg-amber-50 border border-amber-300 text-amber-800'
+                        : 'bg-red-50 border border-red-200 text-red-700'
+                    } px-4 py-3 rounded-lg mb-4 text-sm`}
                   >
                     {error}
                   </motion.div>
@@ -1160,9 +1170,33 @@ export default function Dashboard() {
           setShowLoginModal(false);
           setShowRegisterModal(true);
         }}
-        onLoginSuccess={() => {
-          // Captions are already in state, no need to do anything
-          // The blur will automatically be removed when user becomes authenticated
+        onLoginSuccess={async () => {
+          // Save guest captions to the user's account (only if they were generated as a guest)
+          if (generatedCaptions.length > 0 && isGuestGeneration) {
+            try {
+              await api.post('/captions/save-guest', {
+                captions: generatedCaptions,
+                contentFormat: contentType,
+                contentDescription: description,
+              });
+              // Mark as no longer guest generation
+              setIsGuestGeneration(false);
+              // Refresh usage stats
+              await fetchUsage();
+            } catch (err: any) {
+              console.error('Failed to save guest captions:', err);
+              // Check if it's a limit exceeded error
+              if (err.response?.status === 403 && err.response?.data?.limitExceeded) {
+                setIsLimitError(true);
+                setError(
+                  `Welcome back! Unfortunately, you've already used all ${err.response.data.limit} of your monthly caption generations. Your limit resets next month, or you can upgrade to Premium for unlimited captions!`
+                );
+                // Clear the guest captions since they can't be saved
+                setGeneratedCaptions([]);
+                setIsGuestGeneration(false);
+              }
+            }
+          }
         }}
       />
 
@@ -1173,9 +1207,33 @@ export default function Dashboard() {
           setShowRegisterModal(false);
           setShowLoginModal(true);
         }}
-        onRegisterSuccess={() => {
-          // Captions are already in state, no need to do anything
-          // The blur will automatically be removed when user becomes authenticated
+        onRegisterSuccess={async () => {
+          // Save guest captions to the user's account (only if they were generated as a guest)
+          if (generatedCaptions.length > 0 && isGuestGeneration) {
+            try {
+              await api.post('/captions/save-guest', {
+                captions: generatedCaptions,
+                contentFormat: contentType,
+                contentDescription: description,
+              });
+              // Mark as no longer guest generation
+              setIsGuestGeneration(false);
+              // Refresh usage stats
+              await fetchUsage();
+            } catch (err: any) {
+              console.error('Failed to save guest captions:', err);
+              // Check if it's a limit exceeded error
+              if (err.response?.status === 403 && err.response?.data?.limitExceeded) {
+                setIsLimitError(true);
+                setError(
+                  `Welcome! Unfortunately, you've already used all ${err.response.data.limit} of your monthly caption generations. Your limit resets next month, or you can upgrade to Premium for unlimited captions!`
+                );
+                // Clear the guest captions since they can't be saved
+                setGeneratedCaptions([]);
+                setIsGuestGeneration(false);
+              }
+            }
+          }
         }}
       />
     </div>

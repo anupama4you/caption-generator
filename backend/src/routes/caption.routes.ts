@@ -14,6 +14,9 @@ router.post('/generate', optionalAuthMiddleware, (req, res) =>
 // All other routes require authentication
 router.use(authMiddleware);
 
+// Save guest captions after signup
+router.post('/save-guest', (req, res) => captionController.saveGuestCaptions(req, res));
+
 // Attempts endpoints
 router.get('/attempts', (req, res) => captionController.getAttempts(req, res));
 router.get('/attempts/:id', (req, res) => captionController.getAttemptById(req, res));

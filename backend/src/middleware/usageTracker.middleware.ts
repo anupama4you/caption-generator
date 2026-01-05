@@ -76,7 +76,7 @@ export const checkCaptionLimit = async (
       return res.status(403).json({
         error: 'Limit reached',
         message: `This generation would exceed your monthly limit of ${usage.monthlyLimit}.`,
-        upgrade: usage.monthlyLimit === 10,
+        upgrade: usage.monthlyLimit === 5,
         currentUsage: usage.captionsGenerated,
         limit: usage.monthlyLimit,
         remaining: Math.max(usage.monthlyLimit - usage.captionsGenerated, 0),
