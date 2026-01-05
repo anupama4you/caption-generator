@@ -123,7 +123,12 @@ You do not include markdown or extra text.`;
     const needsHashtags = this.platformNeedsHashtags(platform, format);
     const isYouTube = platform === 'youtube_shorts' || platform === 'youtube_long';
 
-    return `Generate 3 caption variants strictly following the JSON schema below.
+    return `Generate 3 caption variants with DIFFERENT LENGTHS strictly following the JSON schema below.
+
+IMPORTANT - Variant Length Requirements:
+- Variant 1 (SHORT): Maximum 1 line (approx 10-15 words). Punchy, concise hook.
+- Variant 2 (MEDIUM): 2-4 lines (approx 20-40 words). Balanced length with some context.
+- Variant 3 (LONG): 5+ lines (approx 50-100 words). Detailed, storytelling approach with full context.
 
 Rules:
 - Do NOT add extra keys.

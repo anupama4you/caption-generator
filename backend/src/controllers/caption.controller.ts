@@ -11,10 +11,6 @@ const analyticsService = new AnalyticsService();
 export class CaptionController {
   async generateCaption(req: AuthRequest, res: Response): Promise<Response | void> {
     try {
-      if (!req.user) {
-        return res.status(401).json({ error: 'Unauthorized' });
-      }
-
       const {
         platforms,
         contentFormat,
@@ -43,7 +39,7 @@ export class CaptionController {
         });
       }
 
-      // Get user profile for personalization
+      // Get user profile for personalization (only if authenticated)
       const userProfile = req.userProfile;
 
       // Build complete params
@@ -62,6 +58,56 @@ export class CaptionController {
       // Generate captions for all platforms
       const platformResults = await captionService.generateCaptionsForAllPlatforms(params);
 
+      // GUEST USER FLOW - Return captions directly without saving
+      if (!req.user) {
+        // Format the response similar to authenticated users but without database IDs
+        const guestCaptions: any[] = [];
+
+        for (const platformResult of platformResults) {
+          for (let i = 0; i < platformResult.variants.length; i++) {
+            const variant = platformResult.variants[i];
+
+            // Generate analytics without saving
+            const analytics = await analyticsService.predictPerformance(
+              variant.caption,
+              variant.hashtags || [],
+              platformResult.platform,
+              userProfile
+            );
+
+            guestCaptions.push({
+              id: `guest-${platformResult.platform}-${i + 1}`,
+              platform: platformResult.platform,
+              variantNumber: i + 1,
+              generatedCaption: variant.caption,
+              title: variant.title || null,
+              description: variant.description || null,
+              hashtags: variant.hashtags || [],
+              hashtagReason: variant.hashtagReason || null,
+              storySlides: variant.storySlides || [],
+              analytics: {
+                id: `guest-analytics-${platformResult.platform}-${i + 1}`,
+                ...analytics,
+              },
+            });
+          }
+        }
+
+        return res.status(201).json({
+          success: true,
+          message: 'Captions generated successfully',
+          isGuest: true,
+          data: {
+            id: 'guest-attempt',
+            captions: guestCaptions,
+            contentFormat,
+            contentDescription,
+            createdAt: new Date().toISOString(),
+          },
+        });
+      }
+
+      // AUTHENTICATED USER FLOW - Save to database
       // Create caption attempt
       const attempt = await prisma.captionAttempt.create({
         data: {
@@ -130,6 +176,7 @@ export class CaptionController {
       return res.status(201).json({
         success: true,
         message: 'Captions generated successfully',
+        isGuest: false,
         data: fullAttempt,
       });
     } catch (error: any) {

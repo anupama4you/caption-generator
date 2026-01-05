@@ -22,3 +22,22 @@ export const authMiddleware = (req: AuthRequest, res: Response, next: NextFuncti
     return res.status(401).json({ error: 'Unauthorized', message: 'Invalid token' });
   }
 };
+
+// Optional auth middleware - allows both authenticated and unauthenticated users
+export const optionalAuthMiddleware = (req: AuthRequest, _res: Response, next: NextFunction): void => {
+  try {
+    const authHeader = req.headers.authorization;
+
+    if (authHeader && authHeader.startsWith('Bearer ')) {
+      const token = authHeader.substring(7);
+      const decoded = JWTUtil.verifyAccessToken(token);
+      req.user = decoded;
+    }
+    // If no token or invalid token, req.user remains undefined
+    // but we still allow the request to proceed
+    next();
+  } catch (error) {
+    // If token verification fails, just continue without setting req.user
+    next();
+  }
+};

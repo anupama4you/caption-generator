@@ -44,7 +44,8 @@ function App() {
 
   return (
     <Routes>
-      <Route path="/" element={isAuthenticated ? <Dashboard /> : <Landing />} />
+      {/* Dashboard is now the landing page for everyone */}
+      <Route path="/" element={<Dashboard />} />
       <Route
         path="/login"
         element={isAuthenticated ? <Navigate to="/" /> : <Login />}
@@ -54,6 +55,7 @@ function App() {
         element={isAuthenticated ? <Navigate to="/" /> : <Register />}
       />
       <Route path="/dashboard" element={<Navigate to="/" replace />} />
+      <Route path="/landing" element={<Landing />} />
       <Route
         path="/profile"
         element={isAuthenticated ? <Profile /> : <Navigate to="/login" />}
@@ -64,7 +66,7 @@ function App() {
       />
       <Route
         path="/pricing"
-        element={isAuthenticated ? <Pricing /> : <Navigate to="/login" />}
+        element={<Pricing />}
       />
     </Routes>
   );

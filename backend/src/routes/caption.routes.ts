@@ -1,18 +1,18 @@
 import { Router } from 'express';
 import { CaptionController } from '../controllers/caption.controller';
 import { authMiddleware } from '../middleware/auth.middleware';
-import { checkCaptionLimit } from '../middleware/usageTracker.middleware';
+import { optionalAuthMiddleware } from '../middleware/auth.middleware';
 
 const router = Router();
 const captionController = new CaptionController();
 
-// All routes require authentication
-router.use(authMiddleware);
-
-// Generation endpoint (with usage tracking)
-router.post('/generate', checkCaptionLimit, (req, res) =>
+// Generation endpoint - allow unauthenticated users for trial
+router.post('/generate', optionalAuthMiddleware, (req, res) =>
   captionController.generateCaption(req, res)
 );
+
+// All other routes require authentication
+router.use(authMiddleware);
 
 // Attempts endpoints
 router.get('/attempts', (req, res) => captionController.getAttempts(req, res));

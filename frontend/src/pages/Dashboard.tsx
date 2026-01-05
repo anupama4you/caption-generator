@@ -21,6 +21,8 @@ import api from '../services/api';
 import { Caption, Platform, ContentType, UsageStats } from '../types';
 import { CopyToClipboard } from 'react-copy-to-clipboard';
 import Navbar from '../components/Navbar';
+import LoginModal from '../components/LoginModal';
+import RegisterModal from '../components/RegisterModal';
 
 const PLATFORMS: { value: Platform; label: string; icon: any; color: string; supportedContentTypes: ContentType[] }[] = [
   { value: 'instagram', label: 'Instagram', icon: Instagram, color: 'from-purple-500 to-pink-500', supportedContentTypes: ['short_video', 'image', 'carousel', 'story'] },
@@ -97,7 +99,7 @@ const DEFAULT_PRICING: PricingData = {
 };
 
 export default function Dashboard() {
-  const { user } = useSelector((state: RootState) => state.auth);
+  const { user, isAuthenticated } = useSelector((state: RootState) => state.auth);
 
   const [selectedPlatforms, setSelectedPlatforms] = useState<Platform[]>([
     'instagram',
@@ -113,6 +115,8 @@ export default function Dashboard() {
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [expandedAnalytics, setExpandedAnalytics] = useState<Record<string, boolean>>({});
   const [currentSlide, setCurrentSlide] = useState<Record<string, number>>({});
+  const [showLoginModal, setShowLoginModal] = useState(false);
+  const [showRegisterModal, setShowRegisterModal] = useState(false);
   const formatCurrency = (plan: PlanPricing) => (plan.currency === 'USD' ? '$' : `${plan.currency} `);
   const formatAmount = (amount: number) => (Number.isInteger(amount) ? amount.toFixed(0) : amount.toFixed(2));
 
@@ -151,6 +155,7 @@ export default function Dashboard() {
   }, [contentType]);
 
   const fetchUsage = async () => {
+    if (!user) return; // Skip for guest users
     try {
       const response = await api.get('/profile/usage');
       setUsage(response.data.data);
@@ -212,7 +217,11 @@ export default function Dashboard() {
       // Response is an attempt with captions array
       const attempt = response.data.data;
       setGeneratedCaptions(attempt.captions || []);
-      await fetchUsage();
+
+      // Only fetch usage for authenticated users
+      if (user) {
+        await fetchUsage();
+      }
     } catch (err: any) {
       if (err.response?.status === 403) {
         setError(err.response.data.message || 'Monthly limit reached');
@@ -230,7 +239,10 @@ export default function Dashboard() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-purple-50">
-      <Navbar />
+      <Navbar
+        onLoginClick={() => setShowLoginModal(true)}
+        onRegisterClick={() => setShowRegisterModal(true)}
+      />
 
       <main className="container mx-auto px-4 sm:px-6 py-4 max-w-7xl">
         {/* Conditional Layout: Show form OR results */}
@@ -241,13 +253,15 @@ export default function Dashboard() {
             <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 mb-4">
               <div>
                 <h2 className="text-2xl font-bold text-gray-900">
-                  Welcome, {user?.name}! 👋
+                  {user?.name ? `Welcome, ${user.name}! 👋` : '👋 Try AI Caption Generator'}
                 </h2>
-                <p className="text-sm text-gray-600">Generate engaging captions for every platform</p>
+                <p className="text-sm text-gray-600">
+                  {user ? 'Generate engaging captions for every platform' : 'Create captions instantly - Sign up to save & view your results'}
+                </p>
               </div>
 
               {/* Usage Stats - Compact */}
-              {usage && (
+              {usage && user && (
                 <div className="flex items-center gap-4">
                   <div className="text-right">
                     <div className="text-sm text-gray-600">Monthly Usage</div>
@@ -273,7 +287,7 @@ export default function Dashboard() {
             </div>
 
             {/* Premium Upgrade Banner - Compact */}
-            {isFreeUser && (
+            {isFreeUser && user && (
               <motion.div
                 initial={{ opacity: 0, y: -10 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -455,9 +469,63 @@ export default function Dashboard() {
           </motion.div>
         ) : (
           /* Results View - Full Width */
-          <div>
+          <div className="relative">
+            {/* Guest User Signup Modal - Fixed to viewport center */}
+            {!isAuthenticated && (
+              <>
+                {/* Backdrop overlay */}
+                <div className="fixed inset-0 bg-black/20 z-40" />
+
+                {/* Modal */}
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+                  <motion.div
+                    initial={{ opacity: 0, scale: 0.9, y: 20 }}
+                    animate={{ opacity: 1, scale: 1, y: 0 }}
+                    className="bg-white rounded-2xl shadow-2xl p-8 max-w-lg w-full border-2 border-indigo-200"
+                  >
+                    <div className="text-center">
+                      <motion.div
+                        animate={{ rotate: [0, 360] }}
+                        transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
+                        className="w-16 h-16 mx-auto mb-4 bg-gradient-to-r from-indigo-600 to-purple-600 rounded-full flex items-center justify-center"
+                      >
+                        <Sparkles className="w-8 h-8 text-white" />
+                      </motion.div>
+                      <h3 className="text-2xl font-bold text-gray-900 mb-3">
+                        Your Captions Are Ready! 🎉
+                      </h3>
+                      <p className="text-gray-600 mb-6">
+                        Sign up for free to view your generated captions and save them to your account.
+                      </p>
+                      <div className="space-y-3">
+                        <motion.button
+                          onClick={() => setShowRegisterModal(true)}
+                          whileHover={{ scale: 1.02 }}
+                          whileTap={{ scale: 0.98 }}
+                          className="w-full px-6 py-3 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-xl font-semibold shadow-lg hover:shadow-xl transition-all"
+                        >
+                          Sign Up Free - View Results
+                        </motion.button>
+                        <motion.button
+                          onClick={() => setShowLoginModal(true)}
+                          whileHover={{ scale: 1.02 }}
+                          whileTap={{ scale: 0.98 }}
+                          className="w-full px-6 py-3 bg-gray-100 text-gray-700 rounded-xl font-semibold hover:bg-gray-200 transition-colors"
+                        >
+                          Already have an account? Log In
+                        </motion.button>
+                      </div>
+                      <p className="text-xs text-gray-500 mt-4">
+                        ✓ Free forever • ✓ 10 captions/month • ✓ Save history
+                      </p>
+                    </div>
+                  </motion.div>
+                </div>
+              </>
+            )}
+
             {/* Header with Generate Another Button */}
-            <div className="flex justify-between items-center mb-6">
+            <div className={`flex justify-between items-center mb-6 ${!isAuthenticated ? 'filter blur-md pointer-events-none select-none' : ''}`}>
               <div>
                 <h3 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
                   <BarChart3 className="w-7 h-7 text-indigo-600" />
@@ -479,7 +547,7 @@ export default function Dashboard() {
             </div>
 
             {/* Group captions by platform */}
-            <div className="space-y-6">
+            <div className={`space-y-6 ${!isAuthenticated ? 'filter blur-md pointer-events-none select-none' : ''}`}>
               {(() => {
                 // Group captions by platform
                 const captionsByPlatform = generatedCaptions.reduce((acc, caption) => {
@@ -1083,6 +1151,33 @@ export default function Dashboard() {
           </div>
         )}
       </main>
+
+      {/* Login & Register Modals */}
+      <LoginModal
+        isOpen={showLoginModal}
+        onClose={() => setShowLoginModal(false)}
+        onSwitchToRegister={() => {
+          setShowLoginModal(false);
+          setShowRegisterModal(true);
+        }}
+        onLoginSuccess={() => {
+          // Captions are already in state, no need to do anything
+          // The blur will automatically be removed when user becomes authenticated
+        }}
+      />
+
+      <RegisterModal
+        isOpen={showRegisterModal}
+        onClose={() => setShowRegisterModal(false)}
+        onSwitchToLogin={() => {
+          setShowRegisterModal(false);
+          setShowLoginModal(true);
+        }}
+        onRegisterSuccess={() => {
+          // Captions are already in state, no need to do anything
+          // The blur will automatically be removed when user becomes authenticated
+        }}
+      />
     </div>
   );
 }
