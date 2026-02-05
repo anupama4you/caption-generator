@@ -2,6 +2,7 @@ import { Request, Response } from 'express';
 import { stripeService } from '../services/stripe.service';
 import prisma from '../config/database';
 import Stripe from 'stripe';
+import { getMonthlyLimit } from '../config/subscription.config';
 
 export class WebhookController {
   /**
@@ -92,6 +93,7 @@ export class WebhookController {
     const currentMonth = now.getMonth() + 1;
     const currentYear = now.getFullYear();
 
+    const premiumLimit = getMonthlyLimit('PREMIUM');
     await prisma.usageTracking.upsert({
       where: {
         userId_month_year: {
@@ -101,14 +103,14 @@ export class WebhookController {
         },
       },
       update: {
-        monthlyLimit: 100,
+        monthlyLimit: premiumLimit,
       },
       create: {
         userId,
         month: currentMonth,
         year: currentYear,
         captionsGenerated: 0,
-        monthlyLimit: 100,
+        monthlyLimit: premiumLimit,
       },
     });
 
@@ -171,7 +173,7 @@ export class WebhookController {
         },
       },
       data: {
-        monthlyLimit: 5,
+        monthlyLimit: getMonthlyLimit('FREE'),
       },
     });
 

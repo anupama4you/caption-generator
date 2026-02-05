@@ -2,10 +2,14 @@ import { Response } from 'express';
 import { AuthRequest } from '../types';
 import prisma from '../config/database';
 import { stripeService } from '../services/stripe.service';
+import { getMonthlyLimit } from '../config/subscription.config';
 
 export class SubscriptionController {
   /**
-   * Upgrade user subscription to Premium
+   * Direct subscription tier change endpoint
+   * SECURITY: This endpoint is disabled for PREMIUM upgrades.
+   * Premium upgrades must go through Stripe checkout flow.
+   * This endpoint only allows checking current tier or administrative use.
    */
   async upgradeSubscription(req: AuthRequest, res: Response): Promise<Response> {
     try {
@@ -19,6 +23,15 @@ export class SubscriptionController {
       // Validate tier
       if (tier !== 'PREMIUM' && tier !== 'FREE') {
         return res.status(400).json({ error: 'Invalid subscription tier' });
+      }
+
+      // SECURITY: Block direct PREMIUM upgrades - must go through Stripe
+      if (tier === 'PREMIUM') {
+        return res.status(403).json({
+          error: 'Premium upgrades must go through payment flow',
+          message: 'Please use the checkout endpoint to upgrade to Premium',
+          redirectTo: '/api/payment/create-checkout-session',
+        });
       }
 
       // Get current user
@@ -35,61 +48,16 @@ export class SubscriptionController {
         return res.status(400).json({ error: `Already subscribed to ${tier} plan` });
       }
 
-      // Calculate subscription dates
-      const now = new Date();
-      const subscriptionStart = now;
-      const subscriptionEnd = new Date(now);
-      subscriptionEnd.setMonth(subscriptionEnd.getMonth() + 1);
-
-      // Update user subscription
-      const updatedUser = await prisma.user.update({
-        where: { id: userId },
-        data: {
-          subscriptionTier: tier,
-          subscriptionStart: tier === 'PREMIUM' ? subscriptionStart : null,
-          subscriptionEnd: tier === 'PREMIUM' ? subscriptionEnd : null,
-        },
-      });
-
-      // Update usage tracking for current month
-      const currentMonth = now.getMonth() + 1;
-      const currentYear = now.getFullYear();
-
-      const newMonthlyLimit = tier === 'PREMIUM' ? 100 : 10;
-
-      // Update or create usage tracking with new limit
-      await prisma.usageTracking.upsert({
-        where: {
-          userId_month_year: {
-            userId,
-            month: currentMonth,
-            year: currentYear,
-          },
-        },
-        update: {
-          monthlyLimit: newMonthlyLimit,
-        },
-        create: {
-          userId,
-          month: currentMonth,
-          year: currentYear,
-          captionsGenerated: 0,
-          monthlyLimit: newMonthlyLimit,
-        },
-      });
-
-      return res.status(200).json({
-        success: true,
-        message: `Successfully upgraded to ${tier}`,
-        data: {
-          subscriptionTier: updatedUser.subscriptionTier,
-          subscriptionStart: updatedUser.subscriptionStart,
-          subscriptionEnd: updatedUser.subscriptionEnd,
-        },
+      // Only FREE tier changes are allowed through this endpoint
+      // This is essentially a downgrade, so redirect to cancel endpoint
+      return res.status(400).json({
+        error: 'Use the cancel endpoint to downgrade',
+        message: 'To downgrade to FREE, please use POST /api/subscription/cancel',
+        redirectTo: '/api/subscription/cancel',
       });
     } catch (error) {
       console.error('Upgrade subscription error:', error);
-      return res.status(500).json({ error: 'Failed to upgrade subscription' });
+      return res.status(500).json({ error: 'Failed to process subscription request' });
     }
   }
 
@@ -207,7 +175,7 @@ export class SubscriptionController {
           },
         },
         data: {
-          monthlyLimit: 5,
+          monthlyLimit: getMonthlyLimit('FREE'),
         },
       });
 

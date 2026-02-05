@@ -1,6 +1,7 @@
 import { Response, NextFunction } from 'express';
 import { AuthRequest, Platform } from '../types';
 import prisma from '../config/database';
+import { getMonthlyLimit, SUBSCRIPTION_CONFIG } from '../config/subscription.config';
 
 const DEFAULT_PLATFORMS: Platform[] = [
   'instagram',
@@ -20,8 +21,10 @@ export const checkCaptionLimit = async (
   next: NextFunction
 ): Promise<Response | void> => {
   try {
+    // Allow guest users to pass through without limit checking
+    // Guest captions are handled separately in the controller
     if (!req.user) {
-      return res.status(401).json({ error: 'Unauthorized' });
+      return next();
     }
 
     const userId = req.user.id;
@@ -49,16 +52,38 @@ export const checkCaptionLimit = async (
       },
     });
 
-    if (!usage) {
-      const user = await prisma.user.findUnique({
+    // Fetch user to check subscription status
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+    });
+
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    // Check if PREMIUM subscription has expired and auto-downgrade
+    let effectiveTier = user.subscriptionTier as 'FREE' | 'PREMIUM';
+    if (
+      user.subscriptionTier === 'PREMIUM' &&
+      user.subscriptionEnd &&
+      new Date() > new Date(user.subscriptionEnd)
+    ) {
+      // Auto-downgrade expired subscription
+      await prisma.user.update({
         where: { id: userId },
+        data: {
+          subscriptionTier: 'FREE',
+          subscriptionStart: null,
+          subscriptionEnd: null,
+          stripeSubscriptionId: null,
+        },
       });
+      effectiveTier = 'FREE';
+      console.log(`User ${userId} auto-downgraded due to expired subscription`);
+    }
 
-      if (!user) {
-        return res.status(404).json({ error: 'User not found' });
-      }
-
-      const monthlyLimit = user.subscriptionTier === 'FREE' ? 5 : 100;
+    if (!usage) {
+      const monthlyLimit = getMonthlyLimit(effectiveTier);
 
       usage = await prisma.usageTracking.create({
         data: {
@@ -69,6 +94,20 @@ export const checkCaptionLimit = async (
           monthlyLimit,
         },
       });
+    } else if (effectiveTier === 'FREE' && usage.monthlyLimit !== getMonthlyLimit('FREE')) {
+      // Update usage limit if user was downgraded
+      usage = await prisma.usageTracking.update({
+        where: {
+          userId_month_year: {
+            userId,
+            month: currentMonth,
+            year: currentYear,
+          },
+        },
+        data: {
+          monthlyLimit: getMonthlyLimit('FREE'),
+        },
+      });
     }
 
     // Check if limit exceeded
@@ -76,7 +115,7 @@ export const checkCaptionLimit = async (
       return res.status(403).json({
         error: 'Limit reached',
         message: `This generation would exceed your monthly limit of ${usage.monthlyLimit}.`,
-        upgrade: usage.monthlyLimit === 5,
+        upgrade: usage.monthlyLimit === SUBSCRIPTION_CONFIG.FREE.monthlyLimit,
         currentUsage: usage.captionsGenerated,
         limit: usage.monthlyLimit,
         remaining: Math.max(usage.monthlyLimit - usage.captionsGenerated, 0),

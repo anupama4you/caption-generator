@@ -11,6 +11,7 @@ import subscriptionRoutes from './routes/subscription.routes';
 import paymentRoutes from './routes/payment.routes';
 import webhookRoutes from './routes/webhook.routes';
 import oauthRoutes from './routes/oauth.routes';
+import passwordResetRoutes from './routes/passwordReset.routes';
 
 const app = express();
 
@@ -46,6 +47,7 @@ app.get('/health', (_req, res) => {
 // Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/oauth', oauthRoutes);
+app.use('/api/password-reset', passwordResetRoutes);
 app.use('/api/captions', captionRoutes);
 app.use('/api/profile', profileRoutes);
 app.use('/api/subscription', subscriptionRoutes);

@@ -17,6 +17,7 @@ export const config = {
   stripePriceId: process.env.STRIPE_PRICE_ID || '', // Legacy - kept for backwards compatibility
   stripePriceIdMonthly: process.env.STRIPE_PREMIUM_MONTHLY_PRICE_ID || process.env.STRIPE_PRICE_ID || '',
   stripePriceIdYearly: process.env.STRIPE_PREMIUM_YEARLY_PRICE_ID || '',
+  resendApiKey: process.env.RESEND_API_KEY || '',
 };
 
 // Validate required environment variables

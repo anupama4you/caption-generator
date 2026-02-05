@@ -4,6 +4,7 @@ import prisma from '../config/database';
 import { CaptionService } from '../services/caption.service';
 import { AnalyticsService } from '../services/analytics.service';
 import { incrementUsage } from '../middleware/usageTracker.middleware';
+import { getMonthlyLimit } from '../config/subscription.config';
 
 const captionService = new CaptionService();
 const analyticsService = new AnalyticsService();
@@ -402,7 +403,7 @@ export class CaptionController {
           where: { id: req.user.id },
         });
 
-        const monthlyLimit = user?.subscriptionTier === 'FREE' ? 5 : 100;
+        const monthlyLimit = getMonthlyLimit((user?.subscriptionTier || 'FREE') as 'FREE' | 'PREMIUM');
 
         usage = await prisma.usageTracking.create({
           data: {
