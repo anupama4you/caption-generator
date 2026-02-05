@@ -1,5 +1,5 @@
 import { Request, Response, NextFunction } from 'express';
-import { AppError, isAppError, LimitExceededError } from '../errors';
+import { isAppError, LimitExceededError } from '../errors';
 import { ZodError } from 'zod';
 
 export const errorHandler = (

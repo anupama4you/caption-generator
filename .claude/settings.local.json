@@ -26,7 +26,14 @@
       "Bash(tasklist:*)",
       "Bash(timeout 5 type:*)",
       "Bash(tree:*)",
-      "Bash(ls:*)"
+      "Bash(ls:*)",
+      "Bash(echo:*)",
+      "Bash(/opt/homebrew/bin/npm install)",
+      "Bash(export PATH=\"/opt/homebrew/bin:$PATH\")",
+      "Bash(npm run prisma:generate:*)",
+      "Bash(npm run prisma:migrate:dev:*)",
+      "Bash(npm run:*)",
+      "Bash(killall:*)"
     ]
   }
 }

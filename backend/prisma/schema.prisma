@@ -44,9 +44,6 @@ model User {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  // Email verification
-  emailVerified Boolean @default(false)
-
   // Subscription & Usage Tracking
   subscriptionTier     SubscriptionTier @default(FREE)
   subscriptionStart    DateTime?

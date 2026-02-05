@@ -2,11 +2,10 @@ import { Request, Response } from 'express';
 import { randomBytes } from 'crypto';
 import prisma from '../config/database';
 import { emailService } from '../services/email.service';
-import { hashPassword, comparePassword } from '../utils/password.util';
+import { PasswordUtil } from '../utils/password.util';
 import {
   successResponse,
   errorResponse,
-  notFoundResponse,
 } from '../utils/response.util';
 
 export class PasswordResetController {
@@ -136,7 +135,7 @@ export class PasswordResetController {
       }
 
       // Hash new password
-      const hashedPassword = await hashPassword(password);
+      const hashedPassword = await PasswordUtil.hash(password);
 
       // Update password and mark token as used
       await prisma.$transaction([
