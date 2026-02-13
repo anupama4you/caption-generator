@@ -4,9 +4,6 @@ import { useDispatch, useSelector } from 'react-redux';
 import { RootState } from './store/store';
 import { setUser, setLoading } from './store/authSlice';
 import api from './services/api';
-import Landing from './pages/Landing';
-import Login from './pages/Login';
-import Register from './pages/Register';
 import Dashboard from './pages/Dashboard';
 import Profile from './pages/Profile';
 import History from './pages/History';
@@ -51,14 +48,6 @@ function App() {
         {/* Dashboard is now the landing page for everyone */}
         <Route path="/" element={<Dashboard />} />
         <Route
-          path="/login"
-          element={isAuthenticated ? <Navigate to="/" /> : <Login />}
-        />
-        <Route
-          path="/register"
-          element={isAuthenticated ? <Navigate to="/" /> : <Register />}
-        />
-        <Route
           path="/forgot-password"
           element={isAuthenticated ? <Navigate to="/" /> : <ForgotPassword />}
         />
@@ -67,14 +56,13 @@ function App() {
           element={isAuthenticated ? <Navigate to="/" /> : <ResetPassword />}
         />
         <Route path="/dashboard" element={<Navigate to="/" replace />} />
-        <Route path="/landing" element={<Landing />} />
         <Route
           path="/profile"
-          element={isAuthenticated ? <Profile /> : <Navigate to="/login" />}
+          element={isAuthenticated ? <Profile /> : <Navigate to="/" />}
         />
         <Route
           path="/history"
-          element={isAuthenticated ? <History /> : <Navigate to="/login" />}
+          element={isAuthenticated ? <History /> : <Navigate to="/" />}
         />
         <Route
           path="/pricing"

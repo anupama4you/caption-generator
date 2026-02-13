@@ -98,6 +98,103 @@ const DEFAULT_PRICING: PricingData = {
   free: { amount: 0, currency: 'AUD', interval: 'forever', name: 'Free' },
 };
 
+// Benefits Carousel Component
+function BenefitsCarousel() {
+  const [activeIndex, setActiveIndex] = useState(0);
+
+  const benefits = [
+    {
+      icon: TrendingUp,
+      title: 'AI Analytics',
+      description: 'Engagement predictions',
+      color: 'indigo',
+      borderColor: 'border-indigo-100',
+      iconColor: 'text-indigo-600',
+    },
+    {
+      icon: Zap,
+      title: 'Multi-Platform',
+      description: '8+ social networks',
+      color: 'purple',
+      borderColor: 'border-purple-100',
+      iconColor: 'text-purple-600',
+    },
+    {
+      icon: MessageSquare,
+      title: '3 Variations',
+      description: 'Choose the best one',
+      color: 'pink',
+      borderColor: 'border-pink-100',
+      iconColor: 'text-pink-600',
+    },
+  ];
+
+  // Auto-scroll every 3 seconds
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setActiveIndex((prev) => (prev + 1) % benefits.length);
+    }, 3000);
+    return () => clearInterval(interval);
+  }, [benefits.length]);
+
+  return (
+    <div className="mb-10 max-w-3xl mx-auto">
+      {/* Desktop: Grid */}
+      <div className="hidden sm:grid sm:grid-cols-3 gap-4">
+        {benefits.map((benefit, index) => (
+          <motion.div
+            key={index}
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.2 + index * 0.1 }}
+            className={`flex flex-col items-center gap-2 p-4 bg-white rounded-xl shadow-sm border ${benefit.borderColor}`}
+          >
+            <benefit.icon className={`w-8 h-8 ${benefit.iconColor}`} />
+            <span className="font-semibold text-gray-900">{benefit.title}</span>
+            <span className="text-xs text-gray-600">{benefit.description}</span>
+          </motion.div>
+        ))}
+      </div>
+
+      {/* Mobile: Carousel */}
+      <div className="sm:hidden relative overflow-hidden">
+        <div
+          className="flex transition-transform duration-500 ease-in-out"
+          style={{ transform: `translateX(-${activeIndex * 100}%)` }}
+        >
+          {benefits.map((benefit, index) => (
+            <div
+              key={index}
+              className="w-full flex-shrink-0 px-4"
+            >
+              <div className={`flex flex-col items-center gap-2 p-6 bg-white rounded-xl shadow-sm border ${benefit.borderColor}`}>
+                <benefit.icon className={`w-10 h-10 ${benefit.iconColor}`} />
+                <span className="font-semibold text-gray-900 text-lg">{benefit.title}</span>
+                <span className="text-sm text-gray-600">{benefit.description}</span>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {/* Dots Indicator */}
+        <div className="flex justify-center gap-2 mt-4">
+          {benefits.map((_, index) => (
+            <button
+              key={index}
+              onClick={() => setActiveIndex(index)}
+              className={`w-2 h-2 rounded-full transition-all ${
+                index === activeIndex
+                  ? 'bg-indigo-600 w-6'
+                  : 'bg-gray-300'
+              }`}
+            />
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function Dashboard() {
   const { user, isAuthenticated } = useSelector((state: RootState) => state.auth);
 
@@ -129,11 +226,22 @@ export default function Dashboard() {
 
   // Check if user is on free tier
   const isFreeUser = user?.subscriptionTier === 'FREE';
+  // Only FREE tier logged-in users are limited to 2 platforms
+  // Guests and Premium users get unlimited platforms
+  const hasLimitedPlatforms = isFreeUser;
 
   useEffect(() => {
     fetchUsage();
     fetchPricing();
-  }, []);
+  }, [user]); // Fetch usage when user logs in or out
+
+  // Limit selected platforms when user becomes free tier (upgrades from guest or downgrades from premium)
+  useEffect(() => {
+    if (hasLimitedPlatforms && selectedPlatforms.length > MAX_FREE_PLATFORMS) {
+      // User became free tier - limit to MAX_FREE_PLATFORMS
+      setSelectedPlatforms(prev => prev.slice(0, MAX_FREE_PLATFORMS));
+    }
+  }, [isFreeUser, user]);
 
   // Update selected platforms when content type changes
   useEffect(() => {
@@ -145,11 +253,11 @@ export default function Dashboard() {
       const filtered = prev.filter(p => availablePlatformValues.includes(p));
 
       // If we have fewer than the max allowed platforms after filtering, add more
-      if (filtered.length < (isFreeUser ? MAX_FREE_PLATFORMS : availablePlatformValues.length)) {
+      if (filtered.length < (hasLimitedPlatforms ? MAX_FREE_PLATFORMS : availablePlatformValues.length)) {
         // Add platforms that aren't already selected
         const toAdd = availablePlatformValues.filter(p => !filtered.includes(p));
         const combined = [...filtered, ...toAdd];
-        return combined.slice(0, isFreeUser ? MAX_FREE_PLATFORMS : combined.length);
+        return combined.slice(0, hasLimitedPlatforms ? MAX_FREE_PLATFORMS : combined.length);
       }
 
       return filtered;
@@ -185,14 +293,17 @@ export default function Dashboard() {
   };
 
   const togglePlatform = (platform: Platform) => {
+    // Only FREE tier users are limited to 2 platforms
+    const isLimited = user?.subscriptionTier === 'FREE';
+
     setSelectedPlatforms(prev => {
       // If platform is already selected, remove it
       if (prev.includes(platform)) {
         return prev.filter(p => p !== platform);
       }
 
-      // Check if free user is at limit
-      if (isFreeUser && prev.length >= MAX_FREE_PLATFORMS) {
+      // Check if free tier user is at limit
+      if (isLimited && prev.length >= MAX_FREE_PLATFORMS) {
         setError(`Free tier allows up to ${MAX_FREE_PLATFORMS} platforms. Upgrade to Premium for unlimited platforms!`);
         setTimeout(() => setError(''), 3000);
         return prev;
@@ -250,21 +361,86 @@ export default function Dashboard() {
         onRegisterClick={() => setShowRegisterModal(true)}
       />
 
-      <main className="container mx-auto px-4 sm:px-6 py-4 max-w-7xl">
+      <main className="container mx-auto px-4 sm:px-6 py-4 pb-24 sm:pb-8 max-w-7xl">
+        {/* Hero Section for Guests */}
+        {!user && generatedCaptions.length === 0 && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6 }}
+            className="text-center max-w-4xl mx-auto mb-12 pt-8"
+          >
+            <motion.div
+              initial={{ scale: 0.9 }}
+              animate={{ scale: 1 }}
+              transition={{ duration: 0.5 }}
+              className="inline-flex items-center gap-2 bg-gradient-to-r from-indigo-100 to-purple-100 text-indigo-700 px-4 py-2 rounded-full text-sm font-semibold mb-6 shadow-sm"
+            >
+              <Sparkles className="w-4 h-4" />
+              AI-Powered Caption Generator • 100% Free to Try
+            </motion.div>
+
+            <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold text-gray-900 mb-6 leading-tight">
+              Generate <span className="bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">Viral Captions</span>
+              <br />in Seconds
+            </h1>
+
+            <p className="text-lg sm:text-xl text-gray-600 mb-8 max-w-2xl mx-auto leading-relaxed">
+              Create platform-optimized captions with AI-powered analytics. No signup required to start!
+            </p>
+
+            {/* Quick Benefits Carousel */}
+            <BenefitsCarousel />
+
+            {/* CTA */}
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: 0.5 }}
+              className="flex items-center justify-center gap-2 text-sm text-gray-600 mb-8"
+            >
+              <Check className="w-5 h-5 text-green-600" />
+              <span className="font-semibold">No credit card • No signup required • Start generating below ↓</span>
+            </motion.div>
+          </motion.div>
+        )}
+
         {/* Conditional Layout: Show form OR results */}
         {generatedCaptions.length === 0 ? (
           /* Generation Form - Compact Single View */
           <div className="max-w-6xl mx-auto">
             {/* Top Bar: Welcome + Usage */}
-            <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 mb-4">
-              <div>
-                <h2 className="text-2xl font-bold text-gray-900">
-                  {user?.name ? `Welcome, ${user.name}! 👋` : '👋 Try AI Caption Generator'}
-                </h2>
-                <p className="text-sm text-gray-600">
-                  {user ? 'Generate engaging captions for every platform' : 'Create captions instantly - Sign up to save & view your results'}
-                </p>
-              </div>
+            <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 mb-6">
+              <motion.div
+                initial={{ opacity: 0, x: -20 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ duration: 0.5 }}
+              >
+                {user?.name ? (
+                  <>
+                    <h2 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2">
+                      Welcome, {user.name}! 👋
+                    </h2>
+                    <p className="text-sm sm:text-base text-gray-600">
+                      Generate engaging captions for every platform
+                    </p>
+                  </>
+                ) : (
+                  <>
+                    <div className="flex items-center gap-3 mb-2">
+                      <div className="w-10 h-10 bg-gradient-to-r from-indigo-600 to-purple-600 rounded-full flex items-center justify-center">
+                        <Sparkles className="w-5 h-5 text-white" />
+                      </div>
+                      <h2 className="text-2xl sm:text-3xl font-bold bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">
+                        Start Generating Your First Caption
+                      </h2>
+                    </div>
+                    <p className="text-sm sm:text-base text-gray-600 pl-0 sm:pl-13">
+                      Fill in the details below and watch AI create <span className="font-semibold text-indigo-600">amazing captions</span> for you ✨
+                    </p>
+                  </>
+                )}
+              </motion.div>
 
               {/* Usage Stats - Compact */}
               {usage && user && (
@@ -319,13 +495,8 @@ export default function Dashboard() {
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              className="bg-white rounded-2xl shadow-lg p-6 border border-gray-100"
+              className="bg-white rounded-2xl shadow-lg p-6 border border-gray-100 mb-8 sm:mb-4"
             >
-              <div className="flex items-center gap-2 mb-4">
-                <Sparkles className="w-5 h-5 text-indigo-600" />
-                <h3 className="text-lg font-bold text-gray-900">Generate Caption</h3>
-              </div>
-
               <AnimatePresence>
                 {error && (
                   <motion.div
@@ -343,7 +514,7 @@ export default function Dashboard() {
                 )}
               </AnimatePresence>
 
-              <form onSubmit={handleGenerate} className="space-y-4">
+              <form onSubmit={handleGenerate} className="space-y-4 pb-4 sm:pb-0">
                 {/* Content Type - Compact Pills */}
                 <div>
                   <label className="block text-sm font-semibold text-gray-700 mb-2">
@@ -385,7 +556,7 @@ export default function Dashboard() {
                   <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                     {getAvailablePlatforms().map((platform) => {
                       const isSelected = selectedPlatforms.includes(platform.value);
-                      const isDisabled = isFreeUser && !isSelected && selectedPlatforms.length >= MAX_FREE_PLATFORMS;
+                      const isDisabled = hasLimitedPlatforms && !isSelected && selectedPlatforms.length >= MAX_FREE_PLATFORMS;
                       const art = platformArt(platform.value);
 
                       return (
@@ -417,10 +588,10 @@ export default function Dashboard() {
                       );
                     })}
                   </div>
-                  {isFreeUser && selectedPlatforms.length >= MAX_FREE_PLATFORMS && (
+                  {hasLimitedPlatforms && selectedPlatforms.length >= MAX_FREE_PLATFORMS && (
                     <p className="text-xs text-amber-600 mt-2 flex items-center gap-1">
                       <Zap className="w-3 h-3" />
-                      Upgrade to Premium for unlimited platform selection
+                      {user ? 'Upgrade to Premium' : 'Sign up for Premium'} for unlimited platform selection
                     </p>
                   )}
                 </div>
@@ -1171,6 +1342,9 @@ export default function Dashboard() {
           setShowRegisterModal(true);
         }}
         onLoginSuccess={async () => {
+          // Fetch usage stats immediately after login
+          await fetchUsage();
+
           // Save guest captions to the user's account (only if they were generated as a guest)
           if (generatedCaptions.length > 0 && isGuestGeneration) {
             try {
@@ -1181,7 +1355,7 @@ export default function Dashboard() {
               });
               // Mark as no longer guest generation
               setIsGuestGeneration(false);
-              // Refresh usage stats
+              // Refresh usage stats again after saving
               await fetchUsage();
             } catch (err: any) {
               console.error('Failed to save guest captions:', err);
@@ -1208,6 +1382,9 @@ export default function Dashboard() {
           setShowLoginModal(true);
         }}
         onRegisterSuccess={async () => {
+          // Fetch usage stats immediately after registration
+          await fetchUsage();
+
           // Save guest captions to the user's account (only if they were generated as a guest)
           if (generatedCaptions.length > 0 && isGuestGeneration) {
             try {
@@ -1218,7 +1395,7 @@ export default function Dashboard() {
               });
               // Mark as no longer guest generation
               setIsGuestGeneration(false);
-              // Refresh usage stats
+              // Refresh usage stats again after saving
               await fetchUsage();
             } catch (err: any) {
               console.error('Failed to save guest captions:', err);
