@@ -137,7 +137,15 @@ export const incrementUsage = async (userId: string, incrementBy = 1): Promise<v
   const currentMonth = new Date().getMonth() + 1;
   const currentYear = new Date().getFullYear();
 
-  await prisma.usageTracking.update({
+  // Fetch user to get their current tier for monthly limit
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { subscriptionTier: true },
+  });
+
+  const monthlyLimit = getMonthlyLimit(user?.subscriptionTier as 'FREE' | 'PREMIUM' || 'FREE');
+
+  await prisma.usageTracking.upsert({
     where: {
       userId_month_year: {
         userId,
@@ -145,10 +153,17 @@ export const incrementUsage = async (userId: string, incrementBy = 1): Promise<v
         year: currentYear,
       },
     },
-    data: {
+    update: {
       captionsGenerated: {
         increment: incrementBy,
       },
+    },
+    create: {
+      userId,
+      month: currentMonth,
+      year: currentYear,
+      captionsGenerated: incrementBy,
+      monthlyLimit,
     },
   });
 };
