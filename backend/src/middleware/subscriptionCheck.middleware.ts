@@ -9,7 +9,7 @@ import { getMonthlyLimit } from '../config/subscription.config';
  */
 export const checkSubscriptionExpiry = async (
   req: AuthRequest,
-  res: Response,
+  _res: Response,
   next: NextFunction
 ): Promise<Response | void> => {
   try {
