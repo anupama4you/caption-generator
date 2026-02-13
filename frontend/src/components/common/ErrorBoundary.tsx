@@ -29,7 +29,7 @@ export class ErrorBoundary extends Component<Props, State> {
     this.setState({ error, errorInfo });
 
     // Log error to console in development
-    if (process.env.NODE_ENV === 'development') {
+    if (import.meta.env.DEV) {
       console.error('ErrorBoundary caught an error:', error, errorInfo);
     }
 
@@ -69,7 +69,7 @@ export class ErrorBoundary extends Component<Props, State> {
               the page or go back to the home page.
             </p>
 
-            {process.env.NODE_ENV === 'development' && this.state.error && (
+            {import.meta.env.DEV && this.state.error && (
               <div className="bg-gray-100 rounded-lg p-4 mb-6 text-left">
                 <p className="text-sm font-mono text-red-600 break-all">
                   {this.state.error.message}
