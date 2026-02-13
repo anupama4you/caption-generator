@@ -427,16 +427,11 @@ export default function Dashboard() {
                   </>
                 ) : (
                   <>
-                    <div className="flex items-center gap-3 mb-2">
-                      <div className="w-10 h-10 bg-gradient-to-r from-indigo-600 to-purple-600 rounded-full flex items-center justify-center">
-                        <Sparkles className="w-5 h-5 text-white" />
-                      </div>
-                      <h2 className="text-2xl sm:text-3xl font-bold bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">
-                        Start Generating Your First Caption
-                      </h2>
-                    </div>
-                    <p className="text-sm sm:text-base text-gray-600 pl-0 sm:pl-13">
-                      Fill in the details below and watch AI create <span className="font-semibold text-indigo-600">amazing captions</span> for you ✨
+                    <h2 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2">
+                      🚀 Start Generating Your First Caption
+                    </h2>
+                    <p className="text-sm sm:text-base text-gray-600">
+                      Fill in the details below and watch AI create amazing captions for you
                     </p>
                   </>
                 )}
