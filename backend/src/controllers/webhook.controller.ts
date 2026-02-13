@@ -164,7 +164,7 @@ export class WebhookController {
     const currentMonth = now.getMonth() + 1;
     const currentYear = now.getFullYear();
 
-    await prisma.usageTracking.update({
+    await prisma.usageTracking.upsert({
       where: {
         userId_month_year: {
           userId,
@@ -172,7 +172,14 @@ export class WebhookController {
           year: currentYear,
         },
       },
-      data: {
+      update: {
+        monthlyLimit: getMonthlyLimit('FREE'),
+      },
+      create: {
+        userId,
+        month: currentMonth,
+        year: currentYear,
+        captionsGenerated: 0,
         monthlyLimit: getMonthlyLimit('FREE'),
       },
     });
