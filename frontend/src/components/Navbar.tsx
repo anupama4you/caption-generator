@@ -12,9 +12,10 @@ interface NavbarProps {
   showAuthButtons?: boolean;
   onLoginClick?: () => void;
   onRegisterClick?: () => void;
+  onLogoClick?: () => void;
 }
 
-export default function Navbar({ showAuthButtons = true, onLoginClick, onRegisterClick }: NavbarProps) {
+export default function Navbar({ showAuthButtons = true, onLoginClick, onRegisterClick, onLogoClick }: NavbarProps) {
   const dispatch = useDispatch();
   const navigate = useNavigate();
   const { user } = useSelector((state: RootState) => state.auth);
@@ -35,7 +36,7 @@ export default function Navbar({ showAuthButtons = true, onLoginClick, onRegiste
         <div className="container mx-auto px-3 sm:px-6 py-2.5 sm:py-3">
           <div className="flex justify-between items-center gap-2">
             {/* Logo and Brand */}
-            <Link to="/" className="flex items-center gap-2 sm:gap-3 group flex-shrink-0">
+            <Link to="/" onClick={onLogoClick} className="flex items-center gap-2 sm:gap-3 group flex-shrink-0">
               <motion.div
                 className="flex-shrink-0"
                 whileHover={{ scale: 1.05 }}

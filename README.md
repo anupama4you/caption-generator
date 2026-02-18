@@ -129,6 +129,18 @@ VITE_API_URL=http://localhost:5000/api
 
 ### 6. Run the Application
 
+**Option A: Single Command (Recommended)**
+
+Run both frontend and backend with one command from the root directory:
+
+```bash
+npm run dev
+```
+
+This will start both servers concurrently with colored output for easy debugging.
+
+**Option B: Separate Terminals**
+
 **Terminal 1 (Backend):**
 ```bash
 cd backend
@@ -143,8 +155,8 @@ npm run dev
 
 The application will be available at:
 - Frontend: http://localhost:5173
-- Backend: http://localhost:5000
-- Health check: http://localhost:5000/health
+- Backend: http://localhost:5002
+- Health check: http://localhost:5002/health
 
 ## Getting Your API Keys
 

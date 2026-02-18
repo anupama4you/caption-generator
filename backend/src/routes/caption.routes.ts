@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { CaptionController } from '../controllers/caption.controller';
 import { authMiddleware, optionalAuthMiddleware } from '../middleware/auth.middleware';
 import { checkCaptionLimit } from '../middleware/usageTracker.middleware';
+import { captionGenerationRateLimit } from '../middleware/captionRateLimit.middleware';
 import { validateBody, validateParams, validateQuery } from '../middleware/validate.middleware';
 import {
   generateCaptionSchema,
@@ -13,11 +14,16 @@ import {
 const router = Router();
 const captionController = new CaptionController();
 
-// Generation endpoint - allow unauthenticated users for trial
-// checkCaptionLimit enforces monthly limits for authenticated users, passes through for guests
+// Generation endpoint - allow unauthenticated users for trial with strict rate limiting
+// Middleware stack:
+// 1. optionalAuthMiddleware - Check for JWT (optional)
+// 2. captionGenerationRateLimit - Strict rate limits (5/hour for guests, 100/hour for users)
+// 3. validateBody - Validate request structure
+// 4. checkCaptionLimit - Enforce monthly subscription limits for authenticated users
 router.post(
   '/generate',
   optionalAuthMiddleware,
+  ...captionGenerationRateLimit,
   validateBody(generateCaptionSchema),
   checkCaptionLimit,
   (req, res) => captionController.generateCaption(req, res)

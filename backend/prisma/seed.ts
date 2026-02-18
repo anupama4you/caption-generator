@@ -1,9 +1,44 @@
 import { PrismaClient } from '@prisma/client';
+import bcrypt from 'bcrypt';
 
 const prisma = new PrismaClient();
 
 async function main() {
   console.log('Starting seed...');
+
+  // ─── Test Users ───────────────────────────────────────────────────────────
+  const hashedPassword = await bcrypt.hash('Test@1234', 10);
+
+  // Free tier test user
+  await prisma.user.upsert({
+    where: { email: 'test@captions4you.com' },
+    update: {},
+    create: {
+      email: 'test@captions4you.com',
+      password: hashedPassword,
+      name: 'Test User (Free)',
+      subscriptionTier: 'FREE',
+    },
+  });
+
+  // Premium tier test user (subscription valid for 1 year)
+  await prisma.user.upsert({
+    where: { email: 'premium@captions4you.com' },
+    update: {},
+    create: {
+      email: 'premium@captions4you.com',
+      password: hashedPassword,
+      name: 'Test User (Premium)',
+      subscriptionTier: 'PREMIUM',
+      subscriptionStart: new Date(),
+      subscriptionEnd: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000), // 1 year from now
+    },
+  });
+
+  console.log('Test users seeded');
+  console.log('  Free:    test@captions4you.com    / Test@1234');
+  console.log('  Premium: premium@captions4you.com / Test@1234');
+  // ──────────────────────────────────────────────────────────────────────────
 
   // Create subscription plans
   await prisma.subscriptionPlan.upsert({

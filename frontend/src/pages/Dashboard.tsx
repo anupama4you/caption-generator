@@ -359,6 +359,7 @@ export default function Dashboard() {
       <Navbar
         onLoginClick={() => setShowLoginModal(true)}
         onRegisterClick={() => setShowRegisterModal(true)}
+        onLogoClick={() => setGeneratedCaptions([])}
       />
 
       <main className="container mx-auto px-4 sm:px-6 py-4 pb-24 sm:pb-8 max-w-7xl">

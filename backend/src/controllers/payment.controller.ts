@@ -41,9 +41,12 @@ export class PaymentController {
         sessionId: session.id,
         url: session.url,
       });
-    } catch (error) {
-      console.error('Create checkout session error:', error);
-      return res.status(500).json({ error: 'Failed to create checkout session' });
+    } catch (error: any) {
+      console.error('Create checkout session error:', error?.message || error);
+      return res.status(500).json({
+        error: 'Failed to create checkout session',
+        detail: error?.message,
+      });
     }
   }
 
