@@ -98,6 +98,132 @@ const DEFAULT_PRICING: PricingData = {
   free: { amount: 0, currency: 'AUD', interval: 'forever', name: 'Free' },
 };
 
+// Caption Generation Loader Component
+function CaptionLoader() {
+  const [messageIndex, setMessageIndex] = useState(0);
+
+  const messages = [
+    { text: "Warming up the AI brain...", emoji: "🧠" },
+    { text: "Analyzing your content...", emoji: "🔍" },
+    { text: "Crafting the perfect hook...", emoji: "✍️" },
+    { text: "Sprinkling in some magic...", emoji: "✨" },
+    { text: "Picking the best hashtags...", emoji: "#️⃣" },
+    { text: "Predicting viral potential...", emoji: "📈" },
+    { text: "Polishing every word...", emoji: "💎" },
+    { text: "Almost there, hold tight...", emoji: "🚀" },
+  ];
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setMessageIndex(prev => (prev + 1) % messages.length);
+    }, 1800);
+    return () => clearInterval(interval);
+  }, []);
+
+  return (
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      className="fixed inset-0 z-50 flex items-center justify-center bg-white"
+    >
+      {/* Floating background orbs */}
+      {[...Array(6)].map((_, i) => (
+        <motion.div
+          key={i}
+          className="absolute rounded-full opacity-10 blur-3xl"
+          style={{
+            width: `${120 + i * 40}px`,
+            height: `${120 + i * 40}px`,
+            background: i % 2 === 0 ? '#818cf8' : '#a78bfa',
+            left: `${10 + (i * 15)}%`,
+            top: `${10 + (i % 3) * 25}%`,
+          }}
+          animate={{
+            x: [0, 30, -20, 0],
+            y: [0, -25, 15, 0],
+            scale: [1, 1.1, 0.95, 1],
+          }}
+          transition={{ duration: 4 + i, repeat: Infinity, ease: "easeInOut", delay: i * 0.5 }}
+        />
+      ))}
+
+      <div className="relative flex flex-col items-center text-center px-6 max-w-md">
+        {/* Orbiting rings */}
+        <div className="relative w-40 h-40 mb-8">
+          {/* Outer ring */}
+          <motion.div
+            className="absolute inset-0 rounded-full border-2 border-indigo-400/30"
+            animate={{ rotate: 360 }}
+            transition={{ duration: 8, repeat: Infinity, ease: "linear" }}
+          >
+            <div className="absolute -top-2 left-1/2 w-4 h-4 rounded-full bg-indigo-400 -translate-x-1/2" />
+          </motion.div>
+
+          {/* Middle ring */}
+          <motion.div
+            className="absolute inset-4 rounded-full border-2 border-purple-400/40"
+            animate={{ rotate: -360 }}
+            transition={{ duration: 5, repeat: Infinity, ease: "linear" }}
+          >
+            <div className="absolute -top-2 left-1/2 w-3 h-3 rounded-full bg-purple-400 -translate-x-1/2" />
+          </motion.div>
+
+          {/* Center pulsing icon */}
+          <motion.div
+            className="absolute inset-8 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center shadow-2xl shadow-indigo-500/50"
+            animate={{ scale: [1, 1.1, 1] }}
+            transition={{ duration: 1.5, repeat: Infinity, ease: "easeInOut" }}
+          >
+            <Sparkles className="w-10 h-10 text-white" />
+          </motion.div>
+        </div>
+
+        {/* Animated message */}
+        <AnimatePresence mode="wait">
+          <motion.div
+            key={messageIndex}
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+            transition={{ duration: 0.4 }}
+            className="mb-4"
+          >
+            <span className="text-4xl mb-3 block">{messages[messageIndex].emoji}</span>
+            <p className="text-gray-900 text-xl font-semibold">{messages[messageIndex].text}</p>
+          </motion.div>
+        </AnimatePresence>
+
+        <p className="text-indigo-600 text-sm mt-2">Generating captions for all your platforms</p>
+
+        {/* Progress dots */}
+        <div className="flex gap-2 mt-6">
+          {messages.map((_, i) => (
+            <motion.div
+              key={i}
+              className="w-2 h-2 rounded-full"
+              animate={{
+                backgroundColor: i === messageIndex ? '#818cf8' : '#e0e7ff',
+                scale: i === messageIndex ? 1.3 : 1,
+              }}
+              transition={{ duration: 0.3 }}
+            />
+          ))}
+        </div>
+
+        {/* Fun tip */}
+        <motion.p
+          className="text-indigo-500 text-xs mt-8 max-w-xs"
+          animate={{ opacity: [0.5, 1, 0.5] }}
+          transition={{ duration: 2, repeat: Infinity }}
+        >
+          💡 Tip: The more detail you provide, the better your captions will be!
+        </motion.p>
+      </div>
+    </motion.div>
+  );
+}
+
 // Benefits Carousel Component
 function BenefitsCarousel() {
   const [activeIndex, setActiveIndex] = useState(0);
@@ -406,8 +532,10 @@ export default function Dashboard() {
           </motion.div>
         )}
 
-        {/* Conditional Layout: Show form OR results */}
-        {generatedCaptions.length === 0 ? (
+        {/* Conditional Layout: Show loader OR form OR results */}
+        {loading ? (
+          <CaptionLoader />
+        ) : generatedCaptions.length === 0 ? (
           /* Generation Form - Compact Single View */
           <div className="max-w-6xl mx-auto">
             {/* Top Bar: Welcome + Usage */}
@@ -628,22 +756,6 @@ export default function Dashboard() {
               </form>
             </motion.div>
           </div>
-        ) : loading ? (
-          /* Loading State */
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="bg-white rounded-2xl shadow-lg p-8 border border-gray-100 flex flex-col items-center justify-center min-h-[400px]"
-          >
-            <motion.div
-              animate={{ rotate: 360 }}
-              transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
-            >
-              <Sparkles className="w-16 h-16 text-indigo-600" />
-            </motion.div>
-            <p className="mt-4 text-gray-600 font-medium">Creating amazing captions...</p>
-          </motion.div>
         ) : (
           /* Results View - Full Width */
           <div className="relative">

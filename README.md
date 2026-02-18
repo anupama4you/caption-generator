@@ -305,6 +305,53 @@ Final metrics provided:
 - Export to CSV
 - Priority support
 
+## Testing
+
+### Test Users
+
+Run the seed to create pre-configured test accounts:
+
+```bash
+cd backend && npx prisma db seed
+```
+
+| Role | Email | Password | Tier |
+|------|-------|----------|------|
+| Free User | `test@captions4you.com` | `Test@1234` | FREE (10 captions/month) |
+| Premium User | `premium@captions4you.com` | `Test@1234` | PREMIUM (100 captions/month, valid 1 year) |
+
+### Stripe Test Payments
+
+Make sure **Test Mode** is ON in your Stripe Dashboard. Use any future expiry date (e.g. `12/29`) and any 3-digit CVC.
+
+| Scenario | Card Number | Result |
+|----------|-------------|--------|
+| Successful payment | `4242 4242 4242 4242` | ✅ Payment succeeds, user upgraded to PREMIUM |
+| Card declined | `4000 0000 0000 0002` | ❌ Payment declined |
+| Requires 3D Secure | `4000 0025 0000 3155` | 🔐 Requires authentication |
+| Insufficient funds | `4000 0000 0000 9995` | ❌ Insufficient funds |
+
+### Full Subscription Test Flow
+
+```
+1. Log in as test@captions4you.com (FREE user)
+2. Go to /pricing → click "Upgrade to Premium"
+3. Enter test card: 4242 4242 4242 4242, 12/29, 123
+4. Payment succeeds → redirected back to /pricing
+5. User should now show as PREMIUM
+6. Verify: monthly limit increases to 100 captions
+7. Test cancel subscription → user reverts to FREE
+```
+
+### Guest User Testing
+
+Guests can generate up to **5 captions per hour** without signing in. To test:
+1. Open the app in an incognito window
+2. Fill in the form and generate captions
+3. After 5 generations, you'll see the rate limit message
+
+---
+
 ## Contributing
 
 This is a sellable product. For contributions or commercial inquiries, please contact the repository owner.
@@ -316,10 +363,11 @@ Copyright © 2026. All rights reserved.
 ## Support
 
 For issues or questions:
-- Check the code and logs
+- Check the Render/Vercel logs
 - Ensure all environment variables are set correctly
-- Verify database connection
+- Verify database connection (use Internal URL on Render)
 - Check OpenAI API key and credits
+- Verify Stripe webhook endpoint is configured
 
 ## Cost Estimates
 
