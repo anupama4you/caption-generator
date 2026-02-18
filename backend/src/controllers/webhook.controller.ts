@@ -188,18 +188,86 @@ export class WebhookController {
   }
 
   /**
-   * Handle successful payment
+   * Handle successful payment (monthly renewal)
+   * Extends subscriptionEnd by 1 month so user stays PREMIUM
    */
   private async handleInvoicePaymentSucceeded(invoice: Stripe.Invoice) {
     console.log(`Payment succeeded for invoice ${invoice.id}`);
-    // Can add additional logic here if needed (e.g., send receipt email)
+
+    // Only handle subscription renewals (not the first payment - that's handled by checkout.session.completed)
+    const subscriptionId = (invoice as any).subscription as string;
+    if (!subscriptionId || invoice.billing_reason === 'subscription_create') {
+      return;
+    }
+
+    // Find the user by stripeSubscriptionId
+    const user = await prisma.user.findFirst({
+      where: { stripeSubscriptionId: subscriptionId },
+    });
+
+    if (!user) {
+      console.error(`No user found for subscription ${subscriptionId}`);
+      return;
+    }
+
+    // Extend subscription by 1 month from current end date (or now if expired)
+    const currentEnd = user.subscriptionEnd ? new Date(user.subscriptionEnd) : new Date();
+    const newEnd = new Date(currentEnd);
+    newEnd.setMonth(newEnd.getMonth() + 1);
+
+    await prisma.user.update({
+      where: { id: user.id },
+      data: {
+        subscriptionTier: 'PREMIUM',
+        subscriptionEnd: newEnd,
+      },
+    });
+
+    // Reset monthly caption count for the new billing period
+    const now = new Date();
+    const currentMonth = now.getMonth() + 1;
+    const currentYear = now.getFullYear();
+
+    await prisma.usageTracking.upsert({
+      where: {
+        userId_month_year: {
+          userId: user.id,
+          month: currentMonth,
+          year: currentYear,
+        },
+      },
+      update: {
+        monthlyLimit: getMonthlyLimit('PREMIUM'),
+      },
+      create: {
+        userId: user.id,
+        month: currentMonth,
+        year: currentYear,
+        captionsGenerated: 0,
+        monthlyLimit: getMonthlyLimit('PREMIUM'),
+      },
+    });
+
+    console.log(`Subscription renewed for user ${user.id} until ${newEnd.toISOString()}`);
   }
 
   /**
-   * Handle failed payment
+   * Handle failed payment - downgrade user after failed renewal
    */
   private async handleInvoicePaymentFailed(invoice: Stripe.Invoice) {
     console.log(`Payment failed for invoice ${invoice.id}`);
-    // Can add logic to notify user about failed payment
+
+    const subscriptionId = (invoice as any).subscription as string;
+    if (!subscriptionId) return;
+
+    const user = await prisma.user.findFirst({
+      where: { stripeSubscriptionId: subscriptionId },
+    });
+
+    if (!user) return;
+
+    // Log for monitoring - Stripe will retry automatically
+    // After all retries fail, customer.subscription.deleted will fire and downgrade the user
+    console.log(`Payment failed for user ${user.id} - Stripe will retry automatically`);
   }
 }
