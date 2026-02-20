@@ -355,6 +355,8 @@ export default function Dashboard() {
   // Only FREE tier logged-in users are limited to 2 platforms
   // Guests and Premium users get unlimited platforms
   const hasLimitedPlatforms = isFreeUser;
+  // Check if free user has hit their monthly generation limit
+  const isAtLimit = isFreeUser && usage !== null && usage.captionsGenerated >= usage.monthlyLimit;
 
   useEffect(() => {
     fetchUsage();
@@ -467,7 +469,10 @@ export default function Dashboard() {
       }
     } catch (err: any) {
       if (err.response?.status === 403) {
-        setError(err.response.data.message || 'Monthly limit reached');
+        setIsLimitError(true);
+        setError(err.response.data.message || 'Monthly limit reached. Upgrade to Premium for more captions.');
+        // Refresh usage so the limit-reached banner shows immediately
+        if (user) await fetchUsage();
       } else {
         setError('Failed to generate caption');
       }
@@ -735,24 +740,43 @@ export default function Dashboard() {
                   />
                 </div>
 
-                {/* Generate Button */}
-                <button
-                  type="submit"
-                  disabled={loading || !description.trim() || selectedPlatforms.length === 0}
-                  className="w-full bg-gradient-to-r from-indigo-600 to-purple-600 text-white py-3 rounded-lg font-semibold shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed transition-all flex items-center justify-center gap-2"
-                >
-                  {loading ? (
-                    <>
-                      <Loader2 className="w-5 h-5 animate-spin" />
-                      Generating...
-                    </>
-                  ) : (
-                    <>
-                      <Sparkles className="w-5 h-5" />
-                      Generate Captions
-                    </>
-                  )}
-                </button>
+                {/* Limit Reached Banner (free users at cap) */}
+                {isAtLimit ? (
+                  <div className="rounded-xl border-2 border-amber-300 bg-amber-50 p-4 text-center">
+                    <p className="text-amber-800 font-semibold mb-1">
+                      🚫 Monthly limit reached ({usage?.captionsGenerated}/{usage?.monthlyLimit} used)
+                    </p>
+                    <p className="text-amber-700 text-sm mb-3">
+                      Upgrade to Premium for 100 captions/month and unlimited platforms.
+                    </p>
+                    <Link
+                      to="/pricing"
+                      className="inline-block bg-gradient-to-r from-indigo-600 to-purple-600 text-white px-6 py-2 rounded-lg font-semibold text-sm hover:shadow-lg transition-all"
+                    >
+                      <Crown className="w-4 h-4 inline mr-1 -mt-0.5" />
+                      Upgrade to Premium
+                    </Link>
+                  </div>
+                ) : (
+                  /* Generate Button */
+                  <button
+                    type="submit"
+                    disabled={loading || !description.trim() || selectedPlatforms.length === 0}
+                    className="w-full bg-gradient-to-r from-indigo-600 to-purple-600 text-white py-3 rounded-lg font-semibold shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed transition-all flex items-center justify-center gap-2"
+                  >
+                    {loading ? (
+                      <>
+                        <Loader2 className="w-5 h-5 animate-spin" />
+                        Generating...
+                      </>
+                    ) : (
+                      <>
+                        <Sparkles className="w-5 h-5" />
+                        Generate Captions
+                      </>
+                    )}
+                  </button>
+                )}
               </form>
             </motion.div>
           </div>

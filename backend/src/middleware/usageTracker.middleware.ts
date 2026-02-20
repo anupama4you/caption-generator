@@ -39,8 +39,6 @@ export const checkCaptionLimit = async (
       (profile?.preferredPlatforms && profile.preferredPlatforms.length > 0
         ? profile.preferredPlatforms
         : DEFAULT_PLATFORMS) as Platform[];
-    const generationCost = 1;
-
     // Get or create usage tracking record
     let usage = await prisma.usageTracking.findUnique({
       where: {
@@ -110,15 +108,15 @@ export const checkCaptionLimit = async (
       });
     }
 
-    // Check if limit exceeded
-    if (usage.captionsGenerated + generationCost > usage.monthlyLimit) {
+    // Check if limit reached (block when already at or over limit)
+    if (usage.captionsGenerated >= usage.monthlyLimit) {
       return res.status(403).json({
         error: 'Limit reached',
-        message: `This generation would exceed your monthly limit of ${usage.monthlyLimit}.`,
+        message: `You've used all ${usage.monthlyLimit} of your monthly caption generations.`,
         upgrade: usage.monthlyLimit === SUBSCRIPTION_CONFIG.FREE.monthlyLimit,
         currentUsage: usage.captionsGenerated,
         limit: usage.monthlyLimit,
-        remaining: Math.max(usage.monthlyLimit - usage.captionsGenerated, 0),
+        remaining: 0,
       });
     }
 
