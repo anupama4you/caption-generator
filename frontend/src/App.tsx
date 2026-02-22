@@ -10,6 +10,9 @@ import History from './pages/History';
 import Pricing from './pages/Pricing';
 import ForgotPassword from './pages/ForgotPassword';
 import ResetPassword from './pages/ResetPassword';
+import PrivacyPolicy from './pages/PrivacyPolicy';
+import TermsOfService from './pages/TermsOfService';
+import RefundPolicy from './pages/RefundPolicy';
 import { ErrorBoundary } from './components/common/ErrorBoundary';
 
 function App() {
@@ -64,10 +67,10 @@ function App() {
           path="/history"
           element={isAuthenticated ? <History /> : <Navigate to="/" />}
         />
-        <Route
-          path="/pricing"
-          element={<Pricing />}
-        />
+        <Route path="/pricing" element={<Pricing />} />
+        <Route path="/privacy-policy" element={<PrivacyPolicy />} />
+        <Route path="/terms-of-service" element={<TermsOfService />} />
+        <Route path="/refund-policy" element={<RefundPolicy />} />
       </Routes>
     </ErrorBoundary>
   );

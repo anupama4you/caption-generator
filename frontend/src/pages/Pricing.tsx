@@ -9,6 +9,7 @@ import { RootState } from '../store/store';
 import { setUser } from '../store/authSlice';
 import api from '../services/api';
 import Navbar from '../components/Navbar';
+import Footer from '../components/Footer';
 
 interface PlanPricing {
   amount: number;
@@ -587,6 +588,8 @@ export default function Pricing() {
           </motion.div>
         </motion.div>
       )}
+
+      <Footer />
     </div>
   );
 }
