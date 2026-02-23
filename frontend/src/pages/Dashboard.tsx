@@ -89,13 +89,11 @@ interface PlanPricing {
 interface PricingData {
   monthly: PlanPricing;
   yearly: PlanPricing;
-  free: PlanPricing;
 }
 
 const DEFAULT_PRICING: PricingData = {
   monthly: { amount: 4.99, currency: 'AUD', interval: 'month', name: 'Premium Monthly' },
   yearly: { amount: 49.99, currency: 'AUD', interval: 'year', name: 'Premium Yearly' },
-  free: { amount: 0, currency: 'AUD', interval: 'forever', name: 'Free' },
 };
 
 export default function Dashboard() {
@@ -117,7 +115,8 @@ export default function Dashboard() {
   const [currentSlide, setCurrentSlide] = useState<Record<string, number>>({});
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [showRegisterModal, setShowRegisterModal] = useState(false);
-  const formatCurrency = (plan: PlanPricing) => (plan.currency === 'USD' ? '$' : `${plan.currency} `);
+  const [isGuestGeneration, setIsGuestGeneration] = useState(false);
+  const formatCurrency = (plan: PlanPricing) => (plan.currency === 'AUD' ? '$' : `${plan.currency} `);
   const formatAmount = (amount: number) => (Number.isInteger(amount) ? amount.toFixed(0) : amount.toFixed(2));
 
   // Get available platforms based on content type
@@ -125,13 +124,39 @@ export default function Dashboard() {
     return PLATFORMS.filter(p => p.supportedContentTypes.includes(contentType));
   };
 
-  // Check if user is on free tier
+  // Subscription state helpers
   const isFreeUser = user?.subscriptionTier === 'FREE';
+  const isTrialUser = user?.subscriptionTier === 'TRIAL';
+  // Trial countdown
+  const getTrialDaysLeft = () => {
+    if (!user?.trialEndsAt) return 0;
+    const diff = new Date(user.trialEndsAt).getTime() - Date.now();
+    return Math.max(0, Math.ceil(diff / (1000 * 60 * 60 * 24)));
+  };
+  const trialDaysLeft = isTrialUser ? getTrialDaysLeft() : 0;
 
+  // Fetch pricing on mount
   useEffect(() => {
-    fetchUsage();
     fetchPricing();
   }, []);
+
+  // Fetch usage when user is available or changes
+  // Using user?.id as dependency to ensure proper comparison
+  useEffect(() => {
+    const loadUsage = async () => {
+      if (user?.id) {
+        try {
+          const response = await api.get('/profile/usage');
+          setUsage(response.data.data);
+        } catch (err) {
+          console.error('Failed to fetch usage:', err);
+        }
+      } else {
+        setUsage(null);
+      }
+    };
+    loadUsage();
+  }, [user?.id]);
 
   // Update selected platforms when content type changes
   useEffect(() => {
@@ -155,7 +180,6 @@ export default function Dashboard() {
   }, [contentType]);
 
   const fetchUsage = async () => {
-    if (!user) return; // Skip for guest users
     try {
       const response = await api.get('/profile/usage');
       setUsage(response.data.data);
@@ -168,11 +192,10 @@ export default function Dashboard() {
     try {
       const response = await api.get('/payment/pricing');
       if (response?.data?.success && response?.data?.pricing) {
-        const { monthly, yearly, free } = response.data.pricing;
+        const { monthly, yearly } = response.data.pricing;
         setPricing({
           monthly: monthly || DEFAULT_PRICING.monthly,
           yearly: yearly || DEFAULT_PRICING.yearly,
-          free: free || DEFAULT_PRICING.free,
         });
       }
     } catch (err) {
@@ -218,15 +241,37 @@ export default function Dashboard() {
       const attempt = response.data.data;
       setGeneratedCaptions(attempt.captions || []);
 
+      // Track whether this was a guest generation
+      setIsGuestGeneration(!user && response.data.isGuest === true);
+
       // Only fetch usage for authenticated users
       if (user) {
         await fetchUsage();
       }
     } catch (err: any) {
       if (err.response?.status === 403) {
-        setError(err.response.data.message || 'Monthly limit reached');
+        // Handle limit exceeded error from middleware
+        const errorData = err.response.data;
+        setError(errorData.message || errorData.error || 'Monthly limit reached');
+
+        // Update usage display with the returned values
+        if (errorData.currentUsage !== undefined && errorData.limit !== undefined) {
+          setUsage(prev => prev ? {
+            ...prev,
+            captionsGenerated: errorData.currentUsage,
+            monthlyLimit: errorData.limit,
+          } : null);
+        }
+      } else if (err.response?.status === 400) {
+        // Validation errors
+        const errorData = err.response.data;
+        if (errorData.details && Array.isArray(errorData.details)) {
+          setError(errorData.details.map((d: any) => d.message).join(', '));
+        } else {
+          setError(errorData.error || errorData.message || 'Invalid request');
+        }
       } else {
-        setError('Failed to generate caption');
+        setError(err.response?.data?.error || err.response?.data?.message || 'Failed to generate caption');
       }
     } finally {
       setLoading(false);
@@ -278,16 +323,20 @@ export default function Dashboard() {
                     />
                   </div>
                   <span className={`px-3 py-1 rounded-full text-xs font-semibold ${
-                    isFreeUser ? 'bg-gray-100 text-gray-700' : 'bg-gradient-to-r from-purple-500 to-pink-500 text-white'
+                    isTrialUser
+                      ? 'bg-amber-100 text-amber-700'
+                      : isFreeUser
+                        ? 'bg-gray-100 text-gray-700'
+                        : 'bg-gradient-to-r from-purple-500 to-pink-500 text-white'
                   }`}>
-                    {isFreeUser ? 'Free' : 'Premium'}
+                    {isTrialUser ? `Trial: ${trialDaysLeft}d left` : isFreeUser ? 'Free' : 'Premium'}
                   </span>
                 </div>
               )}
             </div>
 
-            {/* Premium Upgrade Banner - Compact */}
-            {isFreeUser && user && (
+            {/* Trial / Upgrade Banner */}
+            {user && isFreeUser && (
               <motion.div
                 initial={{ opacity: 0, y: -10 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -296,15 +345,44 @@ export default function Dashboard() {
                 <div className="flex items-center gap-3">
                   <Crown className="w-6 h-6" />
                   <div>
-                    <div className="font-bold">Upgrade to Premium</div>
-                    <div className="text-xs text-indigo-100">100 captions/month • Unlimited platforms • Advanced analytics</div>
+                    <div className="font-bold">
+                      {user.trialActivated ? 'Upgrade to Premium' : 'Start Your 7-Day Free Trial'}
+                    </div>
+                    <div className="text-xs text-indigo-100">
+                      {user.trialActivated
+                        ? '100 captions/month • Unlimited platforms • Advanced analytics'
+                        : 'Full Premium access for 7 days • No charge until trial ends'}
+                    </div>
                   </div>
                 </div>
                 <Link
                   to="/pricing"
                   className="bg-white text-indigo-600 px-4 py-2 rounded-lg font-semibold text-sm hover:bg-indigo-50 transition-all whitespace-nowrap"
                 >
-                  {`${formatCurrency(pricing.monthly)}${formatAmount(pricing.monthly.amount)}/${pricing.monthly.interval}`}
+                  {user.trialActivated
+                    ? `${formatCurrency(pricing.monthly)}${formatAmount(pricing.monthly.amount)}/${pricing.monthly.interval}`
+                    : 'Try Free'}
+                </Link>
+              </motion.div>
+            )}
+            {user && isTrialUser && (
+              <motion.div
+                initial={{ opacity: 0, y: -10 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="bg-gradient-to-r from-amber-500 to-orange-500 rounded-xl p-4 mb-4 text-white flex items-center justify-between"
+              >
+                <div className="flex items-center gap-3">
+                  <Clock className="w-6 h-6" />
+                  <div>
+                    <div className="font-bold">Trial: {trialDaysLeft} day{trialDaysLeft !== 1 ? 's' : ''} remaining</div>
+                    <div className="text-xs text-amber-100">Your trial ends on {user.trialEndsAt ? new Date(user.trialEndsAt).toLocaleDateString() : ''}. Subscribe to keep Premium access.</div>
+                  </div>
+                </div>
+                <Link
+                  to="/pricing"
+                  className="bg-white text-amber-600 px-4 py-2 rounded-lg font-semibold text-sm hover:bg-amber-50 transition-all whitespace-nowrap"
+                >
+                  Subscribe Now
                 </Link>
               </motion.div>
             )}
@@ -1160,9 +1238,21 @@ export default function Dashboard() {
           setShowLoginModal(false);
           setShowRegisterModal(true);
         }}
-        onLoginSuccess={() => {
-          // Captions are already in state, no need to do anything
-          // The blur will automatically be removed when user becomes authenticated
+        onLoginSuccess={async () => {
+          // Save guest captions to the user's account
+          if (generatedCaptions.length > 0) {
+            try {
+              await api.post('/captions/save-guest', {
+                captions: generatedCaptions,
+                contentFormat: contentType,
+                contentDescription: description,
+              });
+              // Refresh usage stats
+              await fetchUsage();
+            } catch (err) {
+              console.error('Failed to save guest captions:', err);
+            }
+          }
         }}
       />
 
@@ -1173,9 +1263,21 @@ export default function Dashboard() {
           setShowRegisterModal(false);
           setShowLoginModal(true);
         }}
-        onRegisterSuccess={() => {
-          // Captions are already in state, no need to do anything
-          // The blur will automatically be removed when user becomes authenticated
+        onRegisterSuccess={async () => {
+          // Save guest captions to the user's account
+          if (generatedCaptions.length > 0) {
+            try {
+              await api.post('/captions/save-guest', {
+                captions: generatedCaptions,
+                contentFormat: contentType,
+                contentDescription: description,
+              });
+              // Refresh usage stats
+              await fetchUsage();
+            } catch (err) {
+              console.error('Failed to save guest captions:', err);
+            }
+          }
         }}
       />
     </div>

@@ -4,6 +4,7 @@ import prisma from '../config/database';
 import { CaptionService } from '../services/caption.service';
 import { AnalyticsService } from '../services/analytics.service';
 import { incrementUsage } from '../middleware/usageTracker.middleware';
+import { getMonthlyLimit } from '../config/subscription.config';
 
 const captionService = new CaptionService();
 const analyticsService = new AnalyticsService();
@@ -359,6 +360,137 @@ export class CaptionController {
       return res.status(500).json({
         success: false,
         message: 'Failed to delete attempt',
+        error: error.message,
+      });
+    }
+  }
+
+  async saveGuestCaptions(req: AuthRequest, res: Response): Promise<Response> {
+    try {
+      if (!req.user) {
+        return res.status(401).json({
+          success: false,
+          message: 'Authentication required',
+        });
+      }
+
+      const { captions, contentFormat, contentDescription } = req.body;
+
+      if (!captions || !Array.isArray(captions) || captions.length === 0) {
+        return res.status(400).json({
+          success: false,
+          message: 'Captions data is required',
+        });
+      }
+
+      // Check if user has exceeded their monthly limit
+      const currentMonth = new Date().getMonth() + 1;
+      const currentYear = new Date().getFullYear();
+
+      let usage = await prisma.usageTracking.findUnique({
+        where: {
+          userId_month_year: {
+            userId: req.user.id,
+            month: currentMonth,
+            year: currentYear,
+          },
+        },
+      });
+
+      if (!usage) {
+        // Create usage tracking if it doesn't exist
+        const user = await prisma.user.findUnique({
+          where: { id: req.user.id },
+        });
+
+        const monthlyLimit = getMonthlyLimit((user?.subscriptionTier || 'FREE') as 'FREE' | 'PREMIUM');
+
+        usage = await prisma.usageTracking.create({
+          data: {
+            userId: req.user.id,
+            month: currentMonth,
+            year: currentYear,
+            captionsGenerated: 0,
+            monthlyLimit,
+          },
+        });
+      }
+
+      // Check if saving this would exceed the limit
+      if (usage.captionsGenerated + 1 > usage.monthlyLimit) {
+        return res.status(403).json({
+          success: false,
+          message: 'Monthly limit reached',
+          limitExceeded: true,
+          currentUsage: usage.captionsGenerated,
+          limit: usage.monthlyLimit,
+        });
+      }
+
+      // Create a new caption attempt
+      const attempt = await prisma.captionAttempt.create({
+        data: {
+          userId: req.user.id,
+          contentFormat: contentFormat || 'post',
+          contentDescription: contentDescription || 'Guest generated caption',
+        },
+      });
+
+      // Save each caption
+      const savedCaptions = [];
+      for (const caption of captions) {
+        const savedCaption = await prisma.caption.create({
+          data: {
+            attemptId: attempt.id,
+            platform: caption.platform,
+            variantNumber: caption.variantNumber,
+            generatedCaption: caption.generatedCaption,
+            title: caption.title,
+            description: caption.description,
+            hashtags: caption.hashtags || [],
+            hashtagReason: caption.hashtagReason,
+            storySlides: caption.storySlides || [],
+          },
+        });
+
+        // Create analytics if provided
+        if (caption.analytics) {
+          await prisma.captionAnalytics.create({
+            data: {
+              captionId: savedCaption.id,
+              engagementScore: caption.analytics.engagementScore || 0,
+              reachEstimate: caption.analytics.reachEstimate || '0 - 0',
+              viralityScore: caption.analytics.viralityScore || 0,
+              hashtagScore: caption.analytics.hashtagScore || 0,
+              lengthScore: caption.analytics.lengthScore || 0,
+              emojiScore: caption.analytics.emojiScore || 0,
+              timingScore: caption.analytics.timingScore || 0,
+              keywordScore: caption.analytics.keywordScore || 0,
+              bestPostingTime: caption.analytics.bestPostingTime || [],
+              improvementTips: caption.analytics.improvementTips || [],
+            },
+          });
+        }
+
+        savedCaptions.push(savedCaption);
+      }
+
+      // Increment usage tracking (only takes userId and incrementBy)
+      await incrementUsage(req.user.id, 1);
+
+      return res.status(201).json({
+        success: true,
+        message: 'Guest captions saved successfully',
+        data: {
+          id: attempt.id,
+          captionCount: savedCaptions.length,
+        },
+      });
+    } catch (error: any) {
+      console.error('Save guest captions error:', error);
+      return res.status(500).json({
+        success: false,
+        message: 'Failed to save captions',
         error: error.message,
       });
     }

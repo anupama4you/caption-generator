@@ -11,6 +11,7 @@ generator client {
 
 enum SubscriptionTier {
   FREE
+  TRIAL
   PREMIUM
 }
 
@@ -51,10 +52,15 @@ model User {
   stripeCustomerId     String?          @unique
   stripeSubscriptionId String?          @unique
 
+  // Trial tracking
+  trialEndsAt    DateTime?
+  trialActivated Boolean  @default(false)
+
   // Relations
-  profile         UserProfile?
-  captionAttempts CaptionAttempt[]
-  usageTracking   UsageTracking[]
+  profile             UserProfile?
+  captionAttempts     CaptionAttempt[]
+  usageTracking       UsageTracking[]
+  passwordResetTokens PasswordResetToken[]
 
   @@index([email])
 }
@@ -221,4 +227,27 @@ model SubscriptionPlan {
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+}
+
+// Password Reset Token for forgot password flow
+model PasswordResetToken {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  token     String   @unique
+  expiresAt DateTime
+  used      Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  @@index([token])
+  @@index([userId])
+}
+
+// Processed Webhook Events for idempotency
+model ProcessedWebhookEvent {
+  id          String   @id // Use Stripe event ID as primary key
+  eventType   String
+  processedAt DateTime @default(now())
+
+  @@index([processedAt])
 }

@@ -2,7 +2,9 @@ export interface User {
   id: string;
   email: string;
   name: string;
-  subscriptionTier: 'FREE' | 'PREMIUM';
+  subscriptionTier: 'FREE' | 'TRIAL' | 'PREMIUM';
+  trialEndsAt?: string | null;
+  trialActivated?: boolean;
 }
 
 export interface AuthResponse {

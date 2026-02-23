@@ -2,8 +2,10 @@ import { useState, FormEvent } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Mail, Lock, User as UserIcon, Loader2 } from 'lucide-react';
 import { useDispatch } from 'react-redux';
+import { GoogleLogin } from '@react-oauth/google';
 import { setUser } from '../store/authSlice';
 import api from '../services/api';
+import SocialLoginButtons from './SocialLoginButtons';
 
 interface RegisterModalProps {
   isOpen: boolean;
@@ -19,6 +21,62 @@ export default function RegisterModal({ isOpen, onClose, onSwitchToLogin, onRegi
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+
+  const handleGoogleLogin = async (credentialResponse: any) => {
+    try {
+      const response = await api.post('/oauth/google', {
+        credential: credentialResponse.credential,
+      });
+
+      const { accessToken, refreshToken, user } = response.data;
+      localStorage.setItem('accessToken', accessToken);
+      localStorage.setItem('refreshToken', refreshToken);
+      dispatch(setUser(user));
+
+      if (onRegisterSuccess) {
+        onRegisterSuccess();
+      }
+      onClose();
+    } catch (err: any) {
+      setError(err.response?.data?.error || 'Google sign up failed');
+    }
+  };
+
+  const handleFacebookLogin = async (accessToken: string) => {
+    try {
+      const response = await api.post('/oauth/facebook', { accessToken });
+
+      const { accessToken: jwtAccessToken, refreshToken, user } = response.data;
+      localStorage.setItem('accessToken', jwtAccessToken);
+      localStorage.setItem('refreshToken', refreshToken);
+      dispatch(setUser(user));
+
+      if (onRegisterSuccess) {
+        onRegisterSuccess();
+      }
+      onClose();
+    } catch (err: any) {
+      setError(err.response?.data?.error || 'Facebook sign up failed');
+    }
+  };
+
+  const handleTikTokLogin = async (code: string) => {
+    try {
+      const response = await api.post('/oauth/tiktok', { code });
+
+      const { accessToken, refreshToken, user } = response.data;
+      localStorage.setItem('accessToken', accessToken);
+      localStorage.setItem('refreshToken', refreshToken);
+      dispatch(setUser(user));
+
+      if (onRegisterSuccess) {
+        onRegisterSuccess();
+      }
+      onClose();
+    } catch (err: any) {
+      setError(err.response?.data?.error || 'TikTok sign up failed');
+    }
+  };
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
@@ -91,6 +149,33 @@ export default function RegisterModal({ isOpen, onClose, onSwitchToLogin, onRegi
                     {error}
                   </div>
                 )}
+
+                {/* Social Login */}
+                <div className="space-y-3">
+                  <GoogleLogin
+                    onSuccess={handleGoogleLogin}
+                    onError={() => setError('Google sign up failed')}
+                    useOneTap
+                    text="signup_with"
+                    shape="rectangular"
+                    size="large"
+                    width="100%"
+                  />
+
+                  {/* Facebook & TikTok Login */}
+                  <SocialLoginButtons
+                    onFacebookLogin={handleFacebookLogin}
+                    onTikTokLogin={handleTikTokLogin}
+                    setError={setError}
+                  />
+
+                  {/* Divider */}
+                  <div className="flex items-center gap-4">
+                    <div className="flex-1 border-t border-gray-300" />
+                    <span className="text-sm text-gray-500 font-medium">OR</span>
+                    <div className="flex-1 border-t border-gray-300" />
+                  </div>
+                </div>
 
                 <div>
                   <label className="block text-sm font-semibold text-gray-700 mb-2">

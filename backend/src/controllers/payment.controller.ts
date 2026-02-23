@@ -3,10 +3,12 @@ import { AuthRequest } from '../types';
 import { stripeService } from '../services/stripe.service';
 import { config } from '../config/env';
 import prisma from '../config/database';
+import { getMonthlyLimit, TRIAL_DURATION_DAYS } from '../config/subscription.config';
 
 export class PaymentController {
   /**
    * Create a Stripe checkout session for Premium subscription
+   * Automatically includes a 7-day free trial if user hasn't trialed before
    */
   async createCheckoutSession(req: AuthRequest, res: Response): Promise<Response> {
     try {
@@ -23,23 +25,41 @@ export class PaymentController {
         return res.status(400).json({ error: 'Invalid billing interval. Must be "monthly" or "yearly"' });
       }
 
+      // Check current user state
+      const user = await prisma.user.findUnique({ where: { id: userId } });
+      if (!user) {
+        return res.status(404).json({ error: 'User not found' });
+      }
+
+      // Block if already on PREMIUM or active TRIAL
+      if (user.subscriptionTier === 'PREMIUM') {
+        return res.status(400).json({ error: 'Already on Premium plan' });
+      }
+      if (user.subscriptionTier === 'TRIAL') {
+        return res.status(400).json({ error: 'Already on a free trial' });
+      }
+
+      // Determine if user is eligible for trial
+      const includeTrial = !user.trialActivated;
+
       // Create success and cancel URLs
       const successUrl = `${config.frontendUrl}/pricing?session_id={CHECKOUT_SESSION_ID}&success=true`;
       const cancelUrl = `${config.frontendUrl}/pricing?canceled=true`;
 
-      // Create checkout session with billing interval
       const session = await stripeService.createCheckoutSession(
         userId,
         userEmail,
         successUrl,
         cancelUrl,
-        billingInterval as 'monthly' | 'yearly'
+        billingInterval as 'monthly' | 'yearly',
+        includeTrial
       );
 
       return res.status(200).json({
         success: true,
         sessionId: session.id,
         url: session.url,
+        includeTrial,
       });
     } catch (error) {
       console.error('Create checkout session error:', error);
@@ -49,6 +69,7 @@ export class PaymentController {
 
   /**
    * Verify checkout session and update subscription
+   * Handles both trial and immediate-payment sessions
    */
   async verifyCheckoutSession(req: AuthRequest, res: Response): Promise<Response> {
     try {
@@ -62,8 +83,9 @@ export class PaymentController {
 
       const session = await stripeService.getCheckoutSession(sessionId);
 
-      if (!session || session.payment_status !== 'paid') {
-        return res.status(400).json({ error: 'Session not paid or not found' });
+      // Trial sessions have payment_status 'no_payment_required', paid sessions have 'paid'
+      if (!session || (session.payment_status !== 'paid' && session.payment_status !== 'no_payment_required')) {
+        return res.status(400).json({ error: 'Session not valid or not found' });
       }
 
       const userId = session.client_reference_id || session.metadata?.userId;
@@ -78,22 +100,36 @@ export class PaymentController {
         return res.status(400).json({ error: 'Missing user or subscription data' });
       }
 
-      // Align with webhook behavior: immediately mark user as PREMIUM
+      // Retrieve the Stripe subscription to check trial status
+      const subscription = await stripeService.getSubscription(subscriptionId);
+      const isTrialing = subscription.status === 'trialing';
+
       const now = new Date();
-      const subscriptionEnd = new Date(now);
-      subscriptionEnd.setMonth(subscriptionEnd.getMonth() + 1);
+      const trialEndsAt = isTrialing && subscription.trial_end
+        ? new Date(subscription.trial_end * 1000)
+        : null;
+
+      const tier = isTrialing ? 'TRIAL' : 'PREMIUM';
+      const periodEnd = subscription.items.data[0]?.current_period_end;
+      const subscriptionEnd = isTrialing
+        ? trialEndsAt
+        : periodEnd ? new Date(periodEnd * 1000) : new Date();
 
       const updatedUser = await prisma.user.update({
         where: { id: userId },
         data: {
-          subscriptionTier: 'PREMIUM',
+          subscriptionTier: tier,
           subscriptionStart: now,
           subscriptionEnd,
           stripeCustomerId: customerId || null,
           stripeSubscriptionId: subscriptionId || null,
+          trialEndsAt,
+          trialActivated: true,
         },
       });
 
+      // Update usage limits to Premium level
+      const premiumLimit = getMonthlyLimit('PREMIUM');
       const currentMonth = now.getMonth() + 1;
       const currentYear = now.getFullYear();
 
@@ -105,22 +141,31 @@ export class PaymentController {
             year: currentYear,
           },
         },
-        update: { monthlyLimit: 100 },
+        update: { monthlyLimit: premiumLimit },
         create: {
           userId,
           month: currentMonth,
           year: currentYear,
           captionsGenerated: 0,
-          monthlyLimit: 100,
+          monthlyLimit: premiumLimit,
         },
       });
 
       return res.status(200).json({
         success: true,
-        message: 'Session verified and subscription upgraded',
+        message: isTrialing ? 'Free trial activated!' : 'Subscription upgraded!',
         subscriptionTier: updatedUser.subscriptionTier,
         subscriptionStart: updatedUser.subscriptionStart,
         subscriptionEnd: updatedUser.subscriptionEnd,
+        trialEndsAt: updatedUser.trialEndsAt,
+        user: {
+          id: updatedUser.id,
+          email: updatedUser.email,
+          name: updatedUser.name,
+          subscriptionTier: updatedUser.subscriptionTier,
+          trialEndsAt: updatedUser.trialEndsAt,
+          trialActivated: updatedUser.trialActivated,
+        },
       });
     } catch (error) {
       console.error('Verify checkout session error:', error);
@@ -150,12 +195,9 @@ export class PaymentController {
             interval: pricing.yearly.interval,
             name: pricing.yearly.productName,
           },
-          free: {
-            amount: 0,
-            currency: pricing.monthly.currency,
-            interval: 'forever',
-            name: 'Free',
-          },
+        },
+        trial: {
+          durationDays: TRIAL_DURATION_DAYS,
         },
       });
     } catch (error) {

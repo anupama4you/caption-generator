@@ -11,6 +11,10 @@ import Dashboard from './pages/Dashboard';
 import Profile from './pages/Profile';
 import History from './pages/History';
 import Pricing from './pages/Pricing';
+import ForgotPassword from './pages/ForgotPassword';
+import ResetPassword from './pages/ResetPassword';
+import { ErrorBoundary } from './components/common/ErrorBoundary';
+import ServerDownOverlay from './components/common/ServerDownOverlay';
 
 function App() {
   const dispatch = useDispatch();
@@ -43,32 +47,43 @@ function App() {
   }
 
   return (
-    <Routes>
-      {/* Dashboard is now the landing page for everyone */}
-      <Route path="/" element={<Dashboard />} />
-      <Route
-        path="/login"
-        element={isAuthenticated ? <Navigate to="/" /> : <Login />}
-      />
-      <Route
-        path="/register"
-        element={isAuthenticated ? <Navigate to="/" /> : <Register />}
-      />
-      <Route path="/dashboard" element={<Navigate to="/" replace />} />
-      <Route path="/landing" element={<Landing />} />
-      <Route
-        path="/profile"
-        element={isAuthenticated ? <Profile /> : <Navigate to="/login" />}
-      />
-      <Route
-        path="/history"
-        element={isAuthenticated ? <History /> : <Navigate to="/login" />}
-      />
-      <Route
-        path="/pricing"
-        element={<Pricing />}
-      />
-    </Routes>
+    <ErrorBoundary>
+      <ServerDownOverlay />
+      <Routes>
+        {/* Dashboard is now the landing page for everyone */}
+        <Route path="/" element={<Dashboard />} />
+        <Route
+          path="/login"
+          element={isAuthenticated ? <Navigate to="/" /> : <Login />}
+        />
+        <Route
+          path="/register"
+          element={isAuthenticated ? <Navigate to="/" /> : <Register />}
+        />
+        <Route
+          path="/forgot-password"
+          element={isAuthenticated ? <Navigate to="/" /> : <ForgotPassword />}
+        />
+        <Route
+          path="/reset-password"
+          element={isAuthenticated ? <Navigate to="/" /> : <ResetPassword />}
+        />
+        <Route path="/dashboard" element={<Navigate to="/" replace />} />
+        <Route path="/landing" element={<Landing />} />
+        <Route
+          path="/profile"
+          element={isAuthenticated ? <Profile /> : <Navigate to="/login" />}
+        />
+        <Route
+          path="/history"
+          element={isAuthenticated ? <History /> : <Navigate to="/login" />}
+        />
+        <Route
+          path="/pricing"
+          element={<Pricing />}
+        />
+      </Routes>
+    </ErrorBoundary>
   );
 }
 
