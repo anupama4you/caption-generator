@@ -38,8 +38,6 @@ export const checkCaptionLimit = async (
       (profile?.preferredPlatforms && profile.preferredPlatforms.length > 0
         ? profile.preferredPlatforms
         : DEFAULT_PLATFORMS) as Platform[];
-    const generationCost = 1;
-
     // Get or create usage tracking record
     let usage = await prisma.usageTracking.findUnique({
       where: {
@@ -112,15 +110,15 @@ export const checkCaptionLimit = async (
       });
     }
 
-    // Check if limit exceeded
-    if (usage.captionsGenerated + generationCost > usage.monthlyLimit) {
+    // Check if limit reached (block when already at or over limit)
+    if (usage.captionsGenerated >= usage.monthlyLimit) {
       return res.status(403).json({
         error: 'Limit reached',
-        message: `This generation would exceed your monthly limit of ${usage.monthlyLimit}.`,
+        message: `You've used all ${usage.monthlyLimit} of your monthly caption generations.`,
         upgrade: effectiveTier === 'FREE',
         currentUsage: usage.captionsGenerated,
         limit: usage.monthlyLimit,
-        remaining: Math.max(usage.monthlyLimit - usage.captionsGenerated, 0),
+        remaining: 0,
       });
     }
 
@@ -139,7 +137,15 @@ export const incrementUsage = async (userId: string, incrementBy = 1): Promise<v
   const currentMonth = new Date().getMonth() + 1;
   const currentYear = new Date().getFullYear();
 
-  await prisma.usageTracking.update({
+  // Fetch user to get their current tier for monthly limit
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { subscriptionTier: true },
+  });
+
+  const monthlyLimit = getMonthlyLimit(user?.subscriptionTier as 'FREE' | 'PREMIUM' || 'FREE');
+
+  await prisma.usageTracking.upsert({
     where: {
       userId_month_year: {
         userId,
@@ -147,10 +153,17 @@ export const incrementUsage = async (userId: string, incrementBy = 1): Promise<v
         year: currentYear,
       },
     },
-    data: {
+    update: {
       captionsGenerated: {
         increment: incrementBy,
       },
+    },
+    create: {
+      userId,
+      month: currentMonth,
+      year: currentYear,
+      captionsGenerated: incrementBy,
+      monthlyLimit,
     },
   });
 };

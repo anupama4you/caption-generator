@@ -1,4 +1,4 @@
-import { useState, useEffect, FormEvent } from 'react';
+import { useState, useEffect, FormEvent, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { useSelector } from 'react-redux';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -7,7 +7,7 @@ import {
   Hash, MessageSquare, BarChart3, Zap, Instagram,
   Facebook, Youtube, Video, Image, FileText, Camera,
   Loader2, Linkedin, Twitter, Ghost, Clapperboard, Layers, ChevronDown, ChevronUp,
-  ChevronLeft, ChevronRight, Crown
+  ChevronLeft, ChevronRight, Crown, Share2, Star, RefreshCw
 } from 'lucide-react';
 import facebookLogo from '../assets/images/facebook.png';
 import instagramLogo from '../assets/images/instagram.png';
@@ -23,6 +23,7 @@ import { CopyToClipboard } from 'react-copy-to-clipboard';
 import Navbar from '../components/Navbar';
 import LoginModal from '../components/LoginModal';
 import RegisterModal from '../components/RegisterModal';
+import Footer from '../components/Footer';
 
 const PLATFORMS: { value: Platform; label: string; icon: any; color: string; supportedContentTypes: ContentType[] }[] = [
   { value: 'instagram', label: 'Instagram', icon: Instagram, color: 'from-purple-500 to-pink-500', supportedContentTypes: ['short_video', 'image', 'carousel', 'story'] },
@@ -96,6 +97,229 @@ const DEFAULT_PRICING: PricingData = {
   yearly: { amount: 49.99, currency: 'AUD', interval: 'year', name: 'Premium Yearly' },
 };
 
+// Caption Generation Loader Component
+function CaptionLoader() {
+  const [messageIndex, setMessageIndex] = useState(0);
+
+  const messages = [
+    { text: "Warming up the AI brain...", emoji: "🧠" },
+    { text: "Analyzing your content...", emoji: "🔍" },
+    { text: "Crafting the perfect hook...", emoji: "✍️" },
+    { text: "Sprinkling in some magic...", emoji: "✨" },
+    { text: "Picking the best hashtags...", emoji: "#️⃣" },
+    { text: "Predicting viral potential...", emoji: "📈" },
+    { text: "Polishing every word...", emoji: "💎" },
+    { text: "Almost there, hold tight...", emoji: "🚀" },
+  ];
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setMessageIndex(prev => (prev + 1) % messages.length);
+    }, 1800);
+    return () => clearInterval(interval);
+  }, []);
+
+  return (
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      className="fixed inset-0 z-50 flex items-center justify-center bg-white"
+    >
+      {/* Floating background orbs */}
+      {[...Array(6)].map((_, i) => (
+        <motion.div
+          key={i}
+          className="absolute rounded-full opacity-10 blur-3xl"
+          style={{
+            width: `${120 + i * 40}px`,
+            height: `${120 + i * 40}px`,
+            background: i % 2 === 0 ? '#818cf8' : '#a78bfa',
+            left: `${10 + (i * 15)}%`,
+            top: `${10 + (i % 3) * 25}%`,
+          }}
+          animate={{
+            x: [0, 30, -20, 0],
+            y: [0, -25, 15, 0],
+            scale: [1, 1.1, 0.95, 1],
+          }}
+          transition={{ duration: 4 + i, repeat: Infinity, ease: "easeInOut", delay: i * 0.5 }}
+        />
+      ))}
+
+      <div className="relative flex flex-col items-center text-center px-6 max-w-md">
+        {/* Orbiting rings */}
+        <div className="relative w-40 h-40 mb-8">
+          {/* Outer ring */}
+          <motion.div
+            className="absolute inset-0 rounded-full border-2 border-indigo-400/30"
+            animate={{ rotate: 360 }}
+            transition={{ duration: 8, repeat: Infinity, ease: "linear" }}
+          >
+            <div className="absolute -top-2 left-1/2 w-4 h-4 rounded-full bg-indigo-400 -translate-x-1/2" />
+          </motion.div>
+
+          {/* Middle ring */}
+          <motion.div
+            className="absolute inset-4 rounded-full border-2 border-purple-400/40"
+            animate={{ rotate: -360 }}
+            transition={{ duration: 5, repeat: Infinity, ease: "linear" }}
+          >
+            <div className="absolute -top-2 left-1/2 w-3 h-3 rounded-full bg-purple-400 -translate-x-1/2" />
+          </motion.div>
+
+          {/* Center pulsing icon */}
+          <motion.div
+            className="absolute inset-8 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center shadow-2xl shadow-indigo-500/50"
+            animate={{ scale: [1, 1.1, 1] }}
+            transition={{ duration: 1.5, repeat: Infinity, ease: "easeInOut" }}
+          >
+            <Sparkles className="w-10 h-10 text-white" />
+          </motion.div>
+        </div>
+
+        {/* Animated message */}
+        <AnimatePresence mode="wait">
+          <motion.div
+            key={messageIndex}
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+            transition={{ duration: 0.4 }}
+            className="mb-4"
+          >
+            <span className="text-4xl mb-3 block">{messages[messageIndex].emoji}</span>
+            <p className="text-gray-900 text-xl font-semibold">{messages[messageIndex].text}</p>
+          </motion.div>
+        </AnimatePresence>
+
+        <p className="text-indigo-600 text-sm mt-2">Generating captions for all your platforms</p>
+
+        {/* Progress dots */}
+        <div className="flex gap-2 mt-6">
+          {messages.map((_, i) => (
+            <motion.div
+              key={i}
+              className="w-2 h-2 rounded-full"
+              animate={{
+                backgroundColor: i === messageIndex ? '#818cf8' : '#e0e7ff',
+                scale: i === messageIndex ? 1.3 : 1,
+              }}
+              transition={{ duration: 0.3 }}
+            />
+          ))}
+        </div>
+
+        {/* Fun tip */}
+        <motion.p
+          className="text-indigo-500 text-xs mt-8 max-w-xs"
+          animate={{ opacity: [0.5, 1, 0.5] }}
+          transition={{ duration: 2, repeat: Infinity }}
+        >
+          💡 Tip: The more detail you provide, the better your captions will be!
+        </motion.p>
+      </div>
+    </motion.div>
+  );
+}
+
+// Benefits Carousel Component
+function BenefitsCarousel() {
+  const [activeIndex, setActiveIndex] = useState(0);
+
+  const benefits = [
+    {
+      icon: TrendingUp,
+      title: 'AI Analytics',
+      description: 'Engagement predictions',
+      color: 'indigo',
+      borderColor: 'border-indigo-100',
+      iconColor: 'text-indigo-600',
+    },
+    {
+      icon: Zap,
+      title: 'Multi-Platform',
+      description: '8+ social networks',
+      color: 'purple',
+      borderColor: 'border-purple-100',
+      iconColor: 'text-purple-600',
+    },
+    {
+      icon: MessageSquare,
+      title: '3 Variations',
+      description: 'Choose the best one',
+      color: 'pink',
+      borderColor: 'border-pink-100',
+      iconColor: 'text-pink-600',
+    },
+  ];
+
+  // Auto-scroll every 3 seconds
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setActiveIndex((prev) => (prev + 1) % benefits.length);
+    }, 3000);
+    return () => clearInterval(interval);
+  }, [benefits.length]);
+
+  return (
+    <div className="mb-10 max-w-3xl mx-auto">
+      {/* Desktop: Grid */}
+      <div className="hidden sm:grid sm:grid-cols-3 gap-4">
+        {benefits.map((benefit, index) => (
+          <motion.div
+            key={index}
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.2 + index * 0.1 }}
+            className={`flex flex-col items-center gap-2 p-4 bg-white rounded-xl shadow-sm border ${benefit.borderColor}`}
+          >
+            <benefit.icon className={`w-8 h-8 ${benefit.iconColor}`} />
+            <span className="font-semibold text-gray-900">{benefit.title}</span>
+            <span className="text-xs text-gray-600">{benefit.description}</span>
+          </motion.div>
+        ))}
+      </div>
+
+      {/* Mobile: Carousel */}
+      <div className="sm:hidden relative overflow-hidden">
+        <div
+          className="flex transition-transform duration-500 ease-in-out"
+          style={{ transform: `translateX(-${activeIndex * 100}%)` }}
+        >
+          {benefits.map((benefit, index) => (
+            <div
+              key={index}
+              className="w-full flex-shrink-0 px-4"
+            >
+              <div className={`flex flex-col items-center gap-2 p-6 bg-white rounded-xl shadow-sm border ${benefit.borderColor}`}>
+                <benefit.icon className={`w-10 h-10 ${benefit.iconColor}`} />
+                <span className="font-semibold text-gray-900 text-lg">{benefit.title}</span>
+                <span className="text-sm text-gray-600">{benefit.description}</span>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {/* Dots Indicator */}
+        <div className="flex justify-center gap-2 mt-4">
+          {benefits.map((_, index) => (
+            <button
+              key={index}
+              onClick={() => setActiveIndex(index)}
+              className={`w-2 h-2 rounded-full transition-all ${
+                index === activeIndex
+                  ? 'bg-indigo-600 w-6'
+                  : 'bg-gray-300'
+              }`}
+            />
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function Dashboard() {
   const { user, isAuthenticated } = useSelector((state: RootState) => state.auth);
 
@@ -116,6 +340,9 @@ export default function Dashboard() {
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [showRegisterModal, setShowRegisterModal] = useState(false);
   const [isGuestGeneration, setIsGuestGeneration] = useState(false);
+  const [isLimitError, setIsLimitError] = useState(false);
+  const [captionCounter, setCaptionCounter] = useState(54_283);
+  const counterRef = useRef(54_283);
   const formatCurrency = (plan: PlanPricing) => (plan.currency === 'AUD' ? '$' : `${plan.currency} `);
   const formatAmount = (amount: number) => (Number.isInteger(amount) ? amount.toFixed(0) : amount.toFixed(2));
 
@@ -127,6 +354,12 @@ export default function Dashboard() {
   // Subscription state helpers
   const isFreeUser = user?.subscriptionTier === 'FREE';
   const isTrialUser = user?.subscriptionTier === 'TRIAL';
+  // Only FREE tier logged-in users are limited to 2 platforms
+  // Guests and Premium users get unlimited platforms
+  const hasLimitedPlatforms = isFreeUser;
+  // Check if free user has hit their monthly generation limit
+  const isAtLimit = isFreeUser && usage !== null && usage.captionsGenerated >= usage.monthlyLimit;
+
   // Trial countdown
   const getTrialDaysLeft = () => {
     if (!user?.trialEndsAt) return 0;
@@ -135,10 +368,29 @@ export default function Dashboard() {
   };
   const trialDaysLeft = isTrialUser ? getTrialDaysLeft() : 0;
 
+  // Live counter — ticks up every ~4s with slight randomness
+  useEffect(() => {
+    const tick = () => {
+      const increment = Math.floor(Math.random() * 3) + 1;
+      counterRef.current += increment;
+      setCaptionCounter(counterRef.current);
+    };
+    const interval = setInterval(tick, 4000 + Math.random() * 2000);
+    return () => clearInterval(interval);
+  }, []);
+
   // Fetch pricing on mount
   useEffect(() => {
     fetchPricing();
-  }, []);
+  }, [user]); // Fetch usage when user logs in or out
+
+  // Limit selected platforms when user becomes free tier (upgrades from guest or downgrades from premium)
+  useEffect(() => {
+    if (hasLimitedPlatforms && selectedPlatforms.length > MAX_FREE_PLATFORMS) {
+      // User became free tier - limit to MAX_FREE_PLATFORMS
+      setSelectedPlatforms(prev => prev.slice(0, MAX_FREE_PLATFORMS));
+    }
+  }, [isFreeUser, user]);
 
   // Fetch usage when user is available or changes
   // Using user?.id as dependency to ensure proper comparison
@@ -168,11 +420,11 @@ export default function Dashboard() {
       const filtered = prev.filter(p => availablePlatformValues.includes(p));
 
       // If we have fewer than the max allowed platforms after filtering, add more
-      if (filtered.length < (isFreeUser ? MAX_FREE_PLATFORMS : availablePlatformValues.length)) {
+      if (filtered.length < (hasLimitedPlatforms ? MAX_FREE_PLATFORMS : availablePlatformValues.length)) {
         // Add platforms that aren't already selected
         const toAdd = availablePlatformValues.filter(p => !filtered.includes(p));
         const combined = [...filtered, ...toAdd];
-        return combined.slice(0, isFreeUser ? MAX_FREE_PLATFORMS : combined.length);
+        return combined.slice(0, hasLimitedPlatforms ? MAX_FREE_PLATFORMS : combined.length);
       }
 
       return filtered;
@@ -206,14 +458,17 @@ export default function Dashboard() {
   };
 
   const togglePlatform = (platform: Platform) => {
+    // Only FREE tier users are limited to 2 platforms
+    const isLimited = user?.subscriptionTier === 'FREE';
+
     setSelectedPlatforms(prev => {
       // If platform is already selected, remove it
       if (prev.includes(platform)) {
         return prev.filter(p => p !== platform);
       }
 
-      // Check if free user is at limit
-      if (isFreeUser && prev.length >= MAX_FREE_PLATFORMS) {
+      // Check if free tier user is at limit
+      if (isLimited && prev.length >= MAX_FREE_PLATFORMS) {
         setError(`Free tier allows up to ${MAX_FREE_PLATFORMS} platforms. Upgrade to Premium for unlimited platforms!`);
         setTimeout(() => setError(''), 3000);
         return prev;
@@ -224,8 +479,7 @@ export default function Dashboard() {
     });
   };
 
-  const handleGenerate = async (e: FormEvent) => {
-    e.preventDefault();
+  const doGenerate = async () => {
     setError('');
     setLoading(true);
     setCopiedId(null);
@@ -237,31 +491,19 @@ export default function Dashboard() {
         contentDescription: description,
       });
 
-      // Response is an attempt with captions array
       const attempt = response.data.data;
       setGeneratedCaptions(attempt.captions || []);
-
-      // Track whether this was a guest generation
       setIsGuestGeneration(!user && response.data.isGuest === true);
 
-      // Only fetch usage for authenticated users
       if (user) {
         await fetchUsage();
       }
     } catch (err: any) {
       if (err.response?.status === 403) {
-        // Handle limit exceeded error from middleware
+        setIsLimitError(true);
         const errorData = err.response.data;
-        setError(errorData.message || errorData.error || 'Monthly limit reached');
-
-        // Update usage display with the returned values
-        if (errorData.currentUsage !== undefined && errorData.limit !== undefined) {
-          setUsage(prev => prev ? {
-            ...prev,
-            captionsGenerated: errorData.currentUsage,
-            monthlyLimit: errorData.limit,
-          } : null);
-        }
+        setError(errorData.message || 'Monthly limit reached. Upgrade to Premium for more captions.');
+        if (user) await fetchUsage();
       } else if (err.response?.status === 400) {
         // Validation errors
         const errorData = err.response.data;
@@ -278,6 +520,31 @@ export default function Dashboard() {
     }
   };
 
+  const handleGenerate = async (e: FormEvent) => {
+    e.preventDefault();
+    doGenerate();
+  };
+
+  // Build copy text — free users get a subtle watermark appended
+  const getCopyText = (caption: Caption): string => {
+    const isYoutube = caption.platform === 'youtube_shorts' || caption.platform === 'youtube_long';
+    const tags = caption.hashtags.map(t => t.startsWith('#') ? t : `#${t}`).join(' ');
+    const base = isYoutube && caption.title
+      ? `Title: ${caption.title}\n\nDescription: ${caption.description || caption.generatedCaption}\n\n${tags}`
+      : `${caption.generatedCaption}\n\n${tags}`;
+    return isFreeUser ? `${base}\n\n— Generated by captions4you.com` : base;
+  };
+
+  const handleShare = (caption: Caption) => {
+    const text = getCopyText(caption);
+    if (navigator.share) {
+      navigator.share({ text }).catch(() => {});
+    } else {
+      const url = `https://twitter.com/intent/tweet?text=${encodeURIComponent(text.slice(0, 280))}`;
+      window.open(url, '_blank', 'noopener');
+    }
+  };
+
   const progressPercentage = usage
     ? (usage.captionsGenerated / usage.monthlyLimit) * 100
     : 0;
@@ -287,23 +554,129 @@ export default function Dashboard() {
       <Navbar
         onLoginClick={() => setShowLoginModal(true)}
         onRegisterClick={() => setShowRegisterModal(true)}
+        onLogoClick={() => setGeneratedCaptions([])}
       />
 
-      <main className="container mx-auto px-4 sm:px-6 py-4 max-w-7xl">
-        {/* Conditional Layout: Show form OR results */}
-        {generatedCaptions.length === 0 ? (
+      <main className="container mx-auto px-4 sm:px-6 py-4 pb-24 sm:pb-8 max-w-7xl">
+        {/* Hero Section for Guests */}
+        {!user && generatedCaptions.length === 0 && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6 }}
+            className="text-center max-w-4xl mx-auto mb-12 pt-8"
+          >
+            <motion.div
+              initial={{ scale: 0.9 }}
+              animate={{ scale: 1 }}
+              transition={{ duration: 0.5 }}
+              className="inline-flex items-center gap-2 bg-gradient-to-r from-indigo-100 to-purple-100 text-indigo-700 px-4 py-2 rounded-full text-sm font-semibold mb-6 shadow-sm"
+            >
+              <Sparkles className="w-4 h-4" />
+              AI-Powered Caption Generator • 100% Free to Try
+            </motion.div>
+
+            <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold text-gray-900 mb-6 leading-tight">
+              Generate <span className="bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">Viral Captions</span>
+              <br />in Seconds
+            </h1>
+
+            <p className="text-lg sm:text-xl text-gray-600 mb-8 max-w-2xl mx-auto leading-relaxed">
+              Create platform-optimized captions with AI-powered analytics. No signup required to start!
+            </p>
+
+            {/* Live counter */}
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: 0.3 }}
+              className="flex items-center justify-center gap-2 mb-6"
+            >
+              <span className="inline-flex items-center gap-2 bg-white border border-indigo-100 shadow-sm px-4 py-2 rounded-full text-sm">
+                <span className="w-2 h-2 rounded-full bg-green-400 animate-pulse" />
+                <span className="font-bold text-indigo-700 tabular-nums">{captionCounter.toLocaleString()}+</span>
+                <span className="text-gray-500">captions generated by creators worldwide</span>
+              </span>
+            </motion.div>
+
+            {/* Quick Benefits Carousel */}
+            <BenefitsCarousel />
+
+            {/* Testimonials */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8 text-left">
+              {[
+                { name: 'Sarah M.', handle: '@sarahfitlife', platform: 'Instagram', avatar: 'SM', color: 'from-pink-400 to-purple-500', text: 'Finally! I used to spend 30 mins writing captions. Now I get 3 great options in seconds. My engagement is up 40%.' },
+                { name: 'Marcus C.', handle: '@marcuscomedy', platform: 'TikTok', avatar: 'MC', color: 'from-gray-700 to-gray-900', text: 'The TikTok captions are spot on. It knows the right hooks and hashtags. My views doubled in 2 weeks.' },
+                { name: 'Priya P.', handle: '@priyabeauty', platform: 'YouTube', avatar: 'PP', color: 'from-red-500 to-orange-400', text: 'Love that it generates YouTube titles AND descriptions. Saves me so much time and the SEO is better than what I wrote.' },
+              ].map((t, i) => (
+                <motion.div
+                  key={i}
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.4 + i * 0.1 }}
+                  className="bg-white rounded-xl p-4 shadow-sm border border-gray-100"
+                >
+                  <div className="flex gap-1 mb-2">
+                    {[...Array(5)].map((_, s) => <Star key={s} className="w-3 h-3 fill-amber-400 text-amber-400" />)}
+                  </div>
+                  <p className="text-gray-600 text-xs leading-relaxed mb-3">"{t.text}"</p>
+                  <div className="flex items-center gap-2">
+                    <div className={`w-8 h-8 rounded-full bg-gradient-to-br ${t.color} flex items-center justify-center text-white text-xs font-bold flex-shrink-0`}>{t.avatar}</div>
+                    <div>
+                      <p className="text-xs font-semibold text-gray-800">{t.name}</p>
+                      <p className="text-xs text-gray-400">{t.handle} · {t.platform}</p>
+                    </div>
+                  </div>
+                </motion.div>
+              ))}
+            </div>
+
+            {/* CTA */}
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: 0.5 }}
+              className="flex items-center justify-center gap-2 text-sm text-gray-600 mb-8"
+            >
+              <Check className="w-5 h-5 text-green-600" />
+              <span className="font-semibold">No credit card • No signup required • Start generating below ↓</span>
+            </motion.div>
+          </motion.div>
+        )}
+
+        {/* Conditional Layout: Show loader OR form OR results */}
+        {loading ? (
+          <CaptionLoader />
+        ) : generatedCaptions.length === 0 ? (
           /* Generation Form - Compact Single View */
           <div className="max-w-6xl mx-auto">
             {/* Top Bar: Welcome + Usage */}
-            <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 mb-4">
-              <div>
-                <h2 className="text-2xl font-bold text-gray-900">
-                  {user?.name ? `Welcome, ${user.name}! 👋` : '👋 Try AI Caption Generator'}
-                </h2>
-                <p className="text-sm text-gray-600">
-                  {user ? 'Generate engaging captions for every platform' : 'Create captions instantly - Sign up to save & view your results'}
-                </p>
-              </div>
+            <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 mb-6">
+              <motion.div
+                initial={{ opacity: 0, x: -20 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ duration: 0.5 }}
+              >
+                {user?.name ? (
+                  <>
+                    <h2 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2">
+                      Welcome, {user.name}! 👋
+                    </h2>
+                    <p className="text-sm sm:text-base text-gray-600">
+                      Generate engaging captions for every platform
+                    </p>
+                  </>
+                ) : (
+                  <>
+                    <h2 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2">
+                      🚀 Start Generating Your First Caption
+                    </h2>
+                    <p className="text-sm sm:text-base text-gray-600">
+                      Fill in the details below and watch AI create amazing captions for you
+                    </p>
+                  </>
+                )}
+              </motion.div>
 
               {/* Usage Stats - Compact */}
               {usage && user && (
@@ -391,13 +764,8 @@ export default function Dashboard() {
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              className="bg-white rounded-2xl shadow-lg p-6 border border-gray-100"
+              className="bg-white rounded-2xl shadow-lg p-6 border border-gray-100 mb-8 sm:mb-4"
             >
-              <div className="flex items-center gap-2 mb-4">
-                <Sparkles className="w-5 h-5 text-indigo-600" />
-                <h3 className="text-lg font-bold text-gray-900">Generate Caption</h3>
-              </div>
-
               <AnimatePresence>
                 {error && (
                   <motion.div
@@ -411,7 +779,7 @@ export default function Dashboard() {
                 )}
               </AnimatePresence>
 
-              <form onSubmit={handleGenerate} className="space-y-4">
+              <form onSubmit={handleGenerate} className="space-y-4 pb-4 sm:pb-0">
                 {/* Content Type - Compact Pills */}
                 <div>
                   <label className="block text-sm font-semibold text-gray-700 mb-2">
@@ -453,7 +821,7 @@ export default function Dashboard() {
                   <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                     {getAvailablePlatforms().map((platform) => {
                       const isSelected = selectedPlatforms.includes(platform.value);
-                      const isDisabled = isFreeUser && !isSelected && selectedPlatforms.length >= MAX_FREE_PLATFORMS;
+                      const isDisabled = hasLimitedPlatforms && !isSelected && selectedPlatforms.length >= MAX_FREE_PLATFORMS;
                       const art = platformArt(platform.value);
 
                       return (
@@ -485,10 +853,10 @@ export default function Dashboard() {
                       );
                     })}
                   </div>
-                  {isFreeUser && selectedPlatforms.length >= MAX_FREE_PLATFORMS && (
+                  {hasLimitedPlatforms && selectedPlatforms.length >= MAX_FREE_PLATFORMS && (
                     <p className="text-xs text-amber-600 mt-2 flex items-center gap-1">
                       <Zap className="w-3 h-3" />
-                      Upgrade to Premium for unlimited platform selection
+                      {user ? 'Upgrade to Premium' : 'Sign up for Premium'} for unlimited platform selection
                     </p>
                   )}
                 </div>
@@ -508,43 +876,46 @@ export default function Dashboard() {
                   />
                 </div>
 
-                {/* Generate Button */}
-                <button
-                  type="submit"
-                  disabled={loading || !description.trim() || selectedPlatforms.length === 0}
-                  className="w-full bg-gradient-to-r from-indigo-600 to-purple-600 text-white py-3 rounded-lg font-semibold shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed transition-all flex items-center justify-center gap-2"
-                >
-                  {loading ? (
-                    <>
-                      <Loader2 className="w-5 h-5 animate-spin" />
-                      Generating...
-                    </>
-                  ) : (
-                    <>
-                      <Sparkles className="w-5 h-5" />
-                      Generate Captions
-                    </>
-                  )}
-                </button>
+                {/* Limit Reached Banner (free users at cap) */}
+                {isAtLimit ? (
+                  <div className="rounded-xl border-2 border-amber-300 bg-amber-50 p-4 text-center">
+                    <p className="text-amber-800 font-semibold mb-1">
+                      🚫 Monthly limit reached ({usage?.captionsGenerated}/{usage?.monthlyLimit} used)
+                    </p>
+                    <p className="text-amber-700 text-sm mb-3">
+                      Upgrade to Premium for 100 captions/month and unlimited platforms.
+                    </p>
+                    <Link
+                      to="/pricing"
+                      className="inline-block bg-gradient-to-r from-indigo-600 to-purple-600 text-white px-6 py-2 rounded-lg font-semibold text-sm hover:shadow-lg transition-all"
+                    >
+                      <Crown className="w-4 h-4 inline mr-1 -mt-0.5" />
+                      Upgrade to Premium
+                    </Link>
+                  </div>
+                ) : (
+                  /* Generate Button */
+                  <button
+                    type="submit"
+                    disabled={loading || !description.trim() || selectedPlatforms.length === 0}
+                    className="w-full bg-gradient-to-r from-indigo-600 to-purple-600 text-white py-3 rounded-lg font-semibold shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed transition-all flex items-center justify-center gap-2"
+                  >
+                    {loading ? (
+                      <>
+                        <Loader2 className="w-5 h-5 animate-spin" />
+                        Generating...
+                      </>
+                    ) : (
+                      <>
+                        <Sparkles className="w-5 h-5" />
+                        Generate Captions
+                      </>
+                    )}
+                  </button>
+                )}
               </form>
             </motion.div>
           </div>
-        ) : loading ? (
-          /* Loading State */
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="bg-white rounded-2xl shadow-lg p-8 border border-gray-100 flex flex-col items-center justify-center min-h-[400px]"
-          >
-            <motion.div
-              animate={{ rotate: 360 }}
-              transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
-            >
-              <Sparkles className="w-16 h-16 text-indigo-600" />
-            </motion.div>
-            <p className="mt-4 text-gray-600 font-medium">Creating amazing captions...</p>
-          </motion.div>
         ) : (
           /* Results View - Full Width */
           <div className="relative">
@@ -602,8 +973,8 @@ export default function Dashboard() {
               </>
             )}
 
-            {/* Header with Generate Another Button */}
-            <div className={`flex justify-between items-center mb-6 ${!isAuthenticated ? 'filter blur-md pointer-events-none select-none' : ''}`}>
+            {/* Header with action buttons */}
+            <div className={`flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-6 ${!isAuthenticated ? 'filter blur-md pointer-events-none select-none' : ''}`}>
               <div>
                 <h3 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
                   <BarChart3 className="w-7 h-7 text-indigo-600" />
@@ -613,15 +984,27 @@ export default function Dashboard() {
                   {generatedCaptions.length} captions ready to use
                 </p>
               </div>
-              <motion.button
-                onClick={() => setGeneratedCaptions([])}
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-                className="px-6 py-3 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-xl font-semibold shadow-lg hover:shadow-xl transition-all flex items-center gap-2"
-              >
-                <Sparkles className="w-5 h-5" />
-                Generate Another
-              </motion.button>
+              <div className="flex gap-2 flex-wrap">
+                <motion.button
+                  onClick={() => doGenerate()}
+                  disabled={loading}
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  className="px-4 py-2.5 border-2 border-indigo-500 text-indigo-600 rounded-xl font-semibold hover:bg-indigo-50 transition-all flex items-center gap-2 disabled:opacity-50"
+                >
+                  <RefreshCw className="w-4 h-4" />
+                  Try Again
+                </motion.button>
+                <motion.button
+                  onClick={() => { setGeneratedCaptions([]); setDescription(''); }}
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  className="px-4 py-2.5 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-xl font-semibold shadow-lg hover:shadow-xl transition-all flex items-center gap-2"
+                >
+                  <Sparkles className="w-4 h-4" />
+                  New Caption
+                </motion.button>
+              </div>
             </div>
 
             {/* Group captions by platform */}
@@ -805,40 +1188,37 @@ export default function Dashboard() {
                                     ))}
                                   </div>
 
-                                  {/* Copy Button */}
-                                  <CopyToClipboard
-                                    text={
-                                      (caption.platform === 'youtube_shorts' || caption.platform === 'youtube_long') && caption.title
-                                        ? `Title: ${caption.title}\n\nDescription: ${caption.description || caption.generatedCaption}\n\n${caption.hashtags.map(tag => tag.startsWith('#') ? tag : `#${tag}`).join(' ')}`
-                                        : `${caption.generatedCaption}\n\n${caption.hashtags.map(tag => tag.startsWith('#') ? tag : `#${tag}`).join(' ')}`
-                                    }
-                                    onCopy={() => {
-                                      setCopiedId(caption.id);
-                                      setTimeout(() => setCopiedId(null), 2000);
-                                    }}
-                                  >
-                                    <motion.button
-                                      whileHover={{ scale: 1.02 }}
-                                      whileTap={{ scale: 0.98 }}
-                                      className={`w-full py-2 rounded-lg font-semibold transition-all flex items-center justify-center gap-2 text-sm ${
-                                        copiedId === caption.id
-                                          ? 'bg-green-500 text-white'
-                                          : 'bg-gradient-to-r from-green-500 to-emerald-500 text-white hover:shadow-lg'
-                                      }`}
+                                  {/* Copy + Share Buttons */}
+                                  <div className="flex gap-2">
+                                    <CopyToClipboard
+                                      text={getCopyText(caption)}
+                                      onCopy={() => {
+                                        setCopiedId(caption.id);
+                                        setTimeout(() => setCopiedId(null), 2000);
+                                      }}
                                     >
-                                      {copiedId === caption.id ? (
-                                        <>
-                                          <Check className="w-4 h-4" />
-                                          Copied!
-                                        </>
-                                      ) : (
-                                        <>
-                                          <Copy className="w-4 h-4" />
-                                          Copy
-                                        </>
-                                      )}
+                                      <motion.button
+                                        whileHover={{ scale: 1.02 }}
+                                        whileTap={{ scale: 0.98 }}
+                                        className={`flex-1 py-2 rounded-lg font-semibold transition-all flex items-center justify-center gap-2 text-sm ${
+                                          copiedId === caption.id
+                                            ? 'bg-green-500 text-white'
+                                            : 'bg-gradient-to-r from-green-500 to-emerald-500 text-white hover:shadow-lg'
+                                        }`}
+                                      >
+                                        {copiedId === caption.id ? <><Check className="w-4 h-4" />Copied!</> : <><Copy className="w-4 h-4" />Copy</>}
+                                      </motion.button>
+                                    </CopyToClipboard>
+                                    <motion.button
+                                      whileHover={{ scale: 1.05 }}
+                                      whileTap={{ scale: 0.95 }}
+                                      onClick={() => handleShare(caption)}
+                                      className="px-3 py-2 rounded-lg border-2 border-indigo-200 text-indigo-600 hover:bg-indigo-50 transition-all"
+                                      title="Share"
+                                    >
+                                      <Share2 className="w-4 h-4" />
                                     </motion.button>
-                                  </CopyToClipboard>
+                                  </div>
 
                                   {/* Analytics - Collapsible */}
                                   {caption.analytics && (
@@ -1064,14 +1444,10 @@ export default function Dashboard() {
                               ))}
                             </div>
 
-                            {/* Copy Button */}
-                            <div className="mt-auto">
+                            {/* Copy + Share Buttons */}
+                            <div className="mt-auto flex gap-2">
                               <CopyToClipboard
-                                text={
-                                  (caption.platform === 'youtube_shorts' || caption.platform === 'youtube_long') && caption.title
-                                    ? `Title: ${caption.title}\n\nDescription: ${caption.description || caption.generatedCaption}\n\n${caption.hashtags.map(tag => tag.startsWith('#') ? tag : `#${tag}`).join(' ')}`
-                                    : `${caption.generatedCaption}\n\n${caption.hashtags.map(tag => tag.startsWith('#') ? tag : `#${tag}`).join(' ')}`
-                                }
+                                text={getCopyText(caption)}
                                 onCopy={() => {
                                   setCopiedId(caption.id);
                                   setTimeout(() => setCopiedId(null), 2000);
@@ -1080,25 +1456,24 @@ export default function Dashboard() {
                                 <motion.button
                                   whileHover={{ scale: 1.02 }}
                                   whileTap={{ scale: 0.98 }}
-                                  className={`w-full py-2 rounded-lg font-semibold transition-all flex items-center justify-center gap-2 text-sm ${
+                                  className={`flex-1 py-2 rounded-lg font-semibold transition-all flex items-center justify-center gap-2 text-sm ${
                                     copiedId === caption.id
                                       ? 'bg-green-500 text-white'
                                       : 'bg-gradient-to-r from-green-500 to-emerald-500 text-white hover:shadow-lg'
                                   }`}
                                 >
-                                  {copiedId === caption.id ? (
-                                    <>
-                                      <Check className="w-4 h-4" />
-                                      Copied!
-                                    </>
-                                  ) : (
-                                    <>
-                                      <Copy className="w-4 h-4" />
-                                      Copy
-                                    </>
-                                  )}
+                                  {copiedId === caption.id ? <><Check className="w-4 h-4" />Copied!</> : <><Copy className="w-4 h-4" />Copy</>}
                                 </motion.button>
                               </CopyToClipboard>
+                              <motion.button
+                                whileHover={{ scale: 1.05 }}
+                                whileTap={{ scale: 0.95 }}
+                                onClick={() => handleShare(caption)}
+                                className="px-3 py-2 rounded-lg border-2 border-indigo-200 text-indigo-600 hover:bg-indigo-50 transition-all"
+                                title="Share"
+                              >
+                                <Share2 className="w-4 h-4" />
+                              </motion.button>
                             </div>
 
                             {/* Analytics - Collapsible */}
@@ -1239,15 +1614,20 @@ export default function Dashboard() {
           setShowRegisterModal(true);
         }}
         onLoginSuccess={async () => {
-          // Save guest captions to the user's account
-          if (generatedCaptions.length > 0) {
+          // Fetch usage stats immediately after login
+          await fetchUsage();
+
+          // Save guest captions to the user's account (only if they were generated as a guest)
+          if (generatedCaptions.length > 0 && isGuestGeneration) {
             try {
               await api.post('/captions/save-guest', {
                 captions: generatedCaptions,
                 contentFormat: contentType,
                 contentDescription: description,
               });
-              // Refresh usage stats
+              // Mark as no longer guest generation
+              setIsGuestGeneration(false);
+              // Refresh usage stats again after saving
               await fetchUsage();
             } catch (err) {
               console.error('Failed to save guest captions:', err);
@@ -1264,15 +1644,20 @@ export default function Dashboard() {
           setShowLoginModal(true);
         }}
         onRegisterSuccess={async () => {
-          // Save guest captions to the user's account
-          if (generatedCaptions.length > 0) {
+          // Fetch usage stats immediately after registration
+          await fetchUsage();
+
+          // Save guest captions to the user's account (only if they were generated as a guest)
+          if (generatedCaptions.length > 0 && isGuestGeneration) {
             try {
               await api.post('/captions/save-guest', {
                 captions: generatedCaptions,
                 contentFormat: contentType,
                 contentDescription: description,
               });
-              // Refresh usage stats
+              // Mark as no longer guest generation
+              setIsGuestGeneration(false);
+              // Refresh usage stats again after saving
               await fetchUsage();
             } catch (err) {
               console.error('Failed to save guest captions:', err);
@@ -1280,6 +1665,8 @@ export default function Dashboard() {
           }
         }}
       />
+
+      <Footer />
     </div>
   );
 }

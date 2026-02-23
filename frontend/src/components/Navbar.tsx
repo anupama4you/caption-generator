@@ -12,9 +12,10 @@ interface NavbarProps {
   showAuthButtons?: boolean;
   onLoginClick?: () => void;
   onRegisterClick?: () => void;
+  onLogoClick?: () => void;
 }
 
-export default function Navbar({ showAuthButtons = true, onLoginClick, onRegisterClick }: NavbarProps) {
+export default function Navbar({ showAuthButtons = true, onLoginClick, onRegisterClick, onLogoClick }: NavbarProps) {
   const dispatch = useDispatch();
   const navigate = useNavigate();
   const { user } = useSelector((state: RootState) => state.auth);
@@ -32,10 +33,10 @@ export default function Navbar({ showAuthButtons = true, onLoginClick, onRegiste
         animate={{ y: 0, opacity: 1 }}
         className="bg-white/80 backdrop-blur-lg shadow-sm border-b border-gray-200 sticky top-0 z-50"
       >
-        <div className="container mx-auto px-4 sm:px-6 py-2">
-          <div className="flex justify-between items-center">
+        <div className="container mx-auto px-3 sm:px-6 py-2.5 sm:py-3">
+          <div className="flex justify-between items-center gap-2">
             {/* Logo and Brand */}
-            <Link to="/" className="flex items-center gap-2 sm:gap-3 group">
+            <Link to="/" onClick={onLogoClick} className="flex items-center gap-2 sm:gap-3 group flex-shrink-0">
               <motion.div
                 className="flex-shrink-0"
                 whileHover={{ scale: 1.05 }}
@@ -44,7 +45,7 @@ export default function Navbar({ showAuthButtons = true, onLoginClick, onRegiste
                 <img
                   src={mainLogo}
                   alt="Captions For You"
-                  className="h-12 sm:h-14 w-auto object-contain transition-transform duration-300 group-hover:scale-105 drop-shadow-md"
+                  className="h-10 sm:h-12 md:h-14 w-auto object-contain transition-transform duration-300 group-hover:scale-105 drop-shadow-md"
                 />
               </motion.div>
             </Link>
@@ -52,45 +53,45 @@ export default function Navbar({ showAuthButtons = true, onLoginClick, onRegiste
             {/* Auth Buttons */}
             {showAuthButtons && (
               user ? (
-                <div className="flex items-center space-x-2 sm:space-x-4">
+                <div className="flex items-center space-x-1.5 sm:space-x-3">
                   <Link to="/history">
                     <motion.button
                       whileHover={{ scale: 1.05 }}
                       whileTap={{ scale: 0.95 }}
-                      className="p-2 text-gray-700 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors"
+                      className="p-1.5 sm:p-2 text-gray-700 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors"
                       title="History"
                     >
-                      <HistoryIcon className="w-5 h-5" />
+                      <HistoryIcon className="w-4 h-4 sm:w-5 sm:h-5" />
                     </motion.button>
                   </Link>
                   <Link to="/profile">
                     <motion.button
                       whileHover={{ scale: 1.05 }}
                       whileTap={{ scale: 0.95 }}
-                      className="p-2 text-gray-700 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors"
+                      className="p-1.5 sm:p-2 text-gray-700 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors"
                       title="Profile"
                     >
-                      <User className="w-5 h-5" />
+                      <User className="w-4 h-4 sm:w-5 sm:h-5" />
                     </motion.button>
                   </Link>
                   <motion.button
                     onClick={() => setShowLogoutModal(true)}
                     whileHover={{ scale: 1.05 }}
                     whileTap={{ scale: 0.95 }}
-                    className="p-2 text-gray-700 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                    className="p-1.5 sm:p-2 text-gray-700 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
                     title="Logout"
                   >
-                    <LogOut className="w-5 h-5" />
+                    <LogOut className="w-4 h-4 sm:w-5 sm:h-5" />
                   </motion.button>
                 </div>
               ) : (
-                <div className="flex items-center space-x-2 sm:space-x-3">
+                <div className="flex items-center gap-2 sm:gap-3">
                   {onLoginClick ? (
                     <motion.button
                       onClick={onLoginClick}
                       whileHover={{ scale: 1.02 }}
                       whileTap={{ scale: 0.98 }}
-                      className="px-4 py-2 text-gray-700 hover:text-indigo-600 font-semibold transition-colors"
+                      className="px-3 py-1.5 sm:px-4 sm:py-2 text-sm sm:text-base text-gray-700 hover:text-indigo-600 font-semibold transition-colors whitespace-nowrap"
                     >
                       Log In
                     </motion.button>
@@ -99,7 +100,7 @@ export default function Navbar({ showAuthButtons = true, onLoginClick, onRegiste
                       <motion.button
                         whileHover={{ scale: 1.02 }}
                         whileTap={{ scale: 0.98 }}
-                        className="px-4 py-2 text-gray-700 hover:text-indigo-600 font-semibold transition-colors"
+                        className="px-3 py-1.5 sm:px-4 sm:py-2 text-sm sm:text-base text-gray-700 hover:text-indigo-600 font-semibold transition-colors whitespace-nowrap"
                       >
                         Log In
                       </motion.button>
@@ -110,18 +111,20 @@ export default function Navbar({ showAuthButtons = true, onLoginClick, onRegiste
                       onClick={onRegisterClick}
                       whileHover={{ scale: 1.02 }}
                       whileTap={{ scale: 0.98 }}
-                      className="px-4 py-2 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-lg font-semibold hover:shadow-lg transition-all"
+                      className="px-3 py-1.5 sm:px-5 sm:py-2 text-sm sm:text-base bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-lg font-bold hover:shadow-lg transition-all whitespace-nowrap"
                     >
-                      Sign Up Free
+                      <span className="hidden sm:inline">Sign Up Free</span>
+                      <span className="sm:hidden">Sign Up</span>
                     </motion.button>
                   ) : (
                     <Link to="/register">
                       <motion.button
                         whileHover={{ scale: 1.02 }}
                         whileTap={{ scale: 0.98 }}
-                        className="px-4 py-2 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-lg font-semibold hover:shadow-lg transition-all"
+                        className="px-3 py-1.5 sm:px-5 sm:py-2 text-sm sm:text-base bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-lg font-bold hover:shadow-lg transition-all whitespace-nowrap"
                       >
-                        Sign Up Free
+                        <span className="hidden sm:inline">Sign Up Free</span>
+                        <span className="sm:hidden">Sign Up</span>
                       </motion.button>
                     </Link>
                   )}

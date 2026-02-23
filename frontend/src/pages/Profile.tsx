@@ -6,6 +6,7 @@ import { Sparkles, Save, Settings, User as UserIcon, Zap, Hash, Crown, Loader2, 
 import { RootState } from '../store/store';
 import api from '../services/api';
 import Navbar from '../components/Navbar';
+import Footer from '../components/Footer';
 
 export default function Profile() {
   const { user } = useSelector((state: RootState) => state.auth);
@@ -631,6 +632,8 @@ export default function Profile() {
           </>
         )}
       </AnimatePresence>
+
+      <Footer />
     </div>
   );
 }

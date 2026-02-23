@@ -6,12 +6,13 @@ import {
   Heart, Clock, Video, Layers,
   Copy, Check, TrendingUp, Hash, MessageSquare, Zap,
   Instagram, Facebook, Youtube, Linkedin, Twitter, Ghost, Clapperboard,
-  ChevronDown, ChevronUp, BarChart3, ChevronLeft
+  ChevronDown, ChevronUp, BarChart3, ChevronLeft, Search, X as XIcon
 } from 'lucide-react';
 import { CopyToClipboard } from 'react-copy-to-clipboard';
 import api from '../services/api';
 import { CaptionAttempt, ContentType, Platform } from '../types';
 import Navbar from '../components/Navbar';
+import Footer from '../components/Footer';
 import facebookLogo from '../assets/images/facebook.png';
 import instagramLogo from '../assets/images/instagram.png';
 import tiktokLogo from '../assets/images/tiktok.png';
@@ -127,6 +128,18 @@ const PLATFORMS: { value: Platform; label: string; icon: any; color: string }[] 
   { value: 'all', label: 'All Platforms', icon: Sparkles, color: 'from-indigo-500 to-purple-500' },
 ];
 
+const FILTER_PLATFORMS = [
+  { value: 'all', label: 'All' },
+  { value: 'instagram', label: 'Instagram' },
+  { value: 'tiktok', label: 'TikTok' },
+  { value: 'youtube_shorts', label: 'YT Shorts' },
+  { value: 'youtube_long', label: 'YT Long' },
+  { value: 'facebook', label: 'Facebook' },
+  { value: 'linkedin', label: 'LinkedIn' },
+  { value: 'x', label: 'X (Twitter)' },
+  { value: 'snapchat', label: 'Snapchat' },
+];
+
 export default function History() {
   const [attempts, setAttempts] = useState<CaptionAttempt[]>([]);
   const [loading, setLoading] = useState(true);
@@ -134,6 +147,8 @@ export default function History() {
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [expandedAnalytics, setExpandedAnalytics] = useState<Record<string, boolean>>({});
   const [currentSlide, setCurrentSlide] = useState<Record<string, number>>({});
+  const [searchTerm, setSearchTerm] = useState('');
+  const [filterPlatform, setFilterPlatform] = useState('all');
   // Platform logo tiles
   const platformArt = (platform: Platform) => {
     const baseClass =
@@ -219,6 +234,14 @@ export default function History() {
       console.error('Failed to fetch attempt details:', err);
     }
   };
+
+  const filteredAttempts = attempts.filter((attempt) => {
+    const matchesSearch = searchTerm.trim() === '' ||
+      attempt.contentDescription.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesPlatform = filterPlatform === 'all' ||
+      attempt.captions?.some(c => c.platform === filterPlatform);
+    return matchesSearch && matchesPlatform;
+  });
 
   if (selectedAttempt) {
     // Detail view
@@ -920,11 +943,49 @@ export default function History() {
         {/* Page Header */}
         <div className="flex items-center gap-2 mb-4">
           <Clock className="w-6 h-6 text-indigo-600" />
-          <h1 className="text-2xl font-bold text-gray-900">
-            Generation History
-          </h1>
+          <h1 className="text-2xl font-bold text-gray-900">Generation History</h1>
         </div>
 
+        {/* Search + Filter Bar */}
+        {!loading && attempts.length > 0 && (
+          <div className="mb-6 space-y-3">
+            {/* Search */}
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+              <input
+                type="text"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                placeholder="Search by description or keyword..."
+                className="w-full pl-10 pr-10 py-2.5 border border-gray-200 rounded-xl bg-white text-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+              />
+              {searchTerm && (
+                <button onClick={() => setSearchTerm('')} className="absolute right-3 top-1/2 -translate-y-1/2">
+                  <XIcon className="w-4 h-4 text-gray-400 hover:text-gray-600" />
+                </button>
+              )}
+            </div>
+            {/* Platform Filter */}
+            <div className="flex flex-wrap gap-2">
+              {FILTER_PLATFORMS.map((p) => (
+                <button
+                  key={p.value}
+                  onClick={() => setFilterPlatform(p.value)}
+                  className={`px-3 py-1.5 rounded-full text-xs font-semibold transition-all ${
+                    filterPlatform === p.value
+                      ? 'bg-indigo-600 text-white'
+                      : 'bg-white border border-gray-200 text-gray-600 hover:border-indigo-300'
+                  }`}
+                >
+                  {p.label}
+                </button>
+              ))}
+            </div>
+            {filteredAttempts.length !== attempts.length && (
+              <p className="text-xs text-gray-500">{filteredAttempts.length} of {attempts.length} results</p>
+            )}
+          </div>
+        )}
 
         {loading ? (
           <div className="text-center py-12">
@@ -953,10 +1014,17 @@ export default function History() {
               Generate Captions
             </Link>
           </motion.div>
+        ) : filteredAttempts.length === 0 && attempts.length > 0 ? (
+          <div className="bg-white rounded-xl shadow-sm p-8 text-center border border-gray-100">
+            <Search className="w-10 h-10 text-gray-300 mx-auto mb-3" />
+            <p className="text-gray-500 font-medium">No results found</p>
+            <p className="text-sm text-gray-400 mt-1">Try a different search term or platform filter</p>
+            <button onClick={() => { setSearchTerm(''); setFilterPlatform('all'); }} className="mt-4 text-indigo-600 text-sm font-semibold hover:underline">Clear filters</button>
+          </div>
         ) : (
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
             <AnimatePresence>
-              {attempts.map((attempt, index) => {
+              {filteredAttempts.map((attempt, index) => {
                 const platformCount = new Set(attempt.captions?.map(c => c.platform) || []).size;
 
                 return (
@@ -1036,6 +1104,7 @@ export default function History() {
           </div>
         )}
       </main>
+      <Footer />
     </div>
   );
 }

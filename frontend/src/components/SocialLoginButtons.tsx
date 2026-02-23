@@ -16,7 +16,7 @@ interface SocialLoginButtonsProps {
   setError: (error: string) => void;
 }
 
-export default function SocialLoginButtons({ onFacebookLogin, onTikTokLogin, setError }: SocialLoginButtonsProps) {
+export default function SocialLoginButtons({ onFacebookLogin, onTikTokLogin: _onTikTokLogin, setError }: SocialLoginButtonsProps) {
   const FACEBOOK_APP_ID = import.meta.env.VITE_FACEBOOK_APP_ID;
   const TIKTOK_CLIENT_KEY = import.meta.env.VITE_TIKTOK_CLIENT_KEY;
 
