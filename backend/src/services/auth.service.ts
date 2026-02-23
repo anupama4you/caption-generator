@@ -53,6 +53,8 @@ export class AuthService {
         email: user.email,
         name: user.name,
         subscriptionTier: user.subscriptionTier,
+        trialEndsAt: null,
+        trialActivated: false,
       },
       accessToken,
       refreshToken,
@@ -95,6 +97,8 @@ export class AuthService {
         email: user.email,
         name: user.name,
         subscriptionTier: user.subscriptionTier,
+        trialEndsAt: user.trialEndsAt || null,
+        trialActivated: user.trialActivated || false,
       },
       accessToken,
       refreshToken,
@@ -130,19 +134,20 @@ export class AuthService {
   async getMe(userId: string) {
     const user = await prisma.user.findUnique({
       where: { id: userId },
-      select: {
-        id: true,
-        email: true,
-        name: true,
-        subscriptionTier: true,
-        createdAt: true,
-      },
     });
 
     if (!user) {
       throw new Error('User not found');
     }
 
-    return user;
+    return {
+      id: user.id,
+      email: user.email,
+      name: user.name,
+      subscriptionTier: user.subscriptionTier,
+      trialEndsAt: user.trialEndsAt || null,
+      trialActivated: user.trialActivated || false,
+      createdAt: user.createdAt,
+    };
   }
 }

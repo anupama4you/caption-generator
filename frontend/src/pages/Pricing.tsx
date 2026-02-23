@@ -3,7 +3,7 @@ import { useSearchParams } from 'react-router-dom';
 import { useSelector, useDispatch } from 'react-redux';
 import { motion } from 'framer-motion';
 import {
-  Check, Zap, Crown, Loader2
+  Check, Zap, Crown, Loader2, Clock, X
 } from 'lucide-react';
 import { RootState } from '../store/store';
 import { setUser } from '../store/authSlice';
@@ -17,75 +17,27 @@ interface PlanPricing {
   name: string;
 }
 
-interface PricingData {
-  monthly: PlanPricing;
-  yearly: PlanPricing;
-  free: PlanPricing;
-}
+const DEFAULT_MONTHLY: PlanPricing = { amount: 4.99, currency: 'AUD', interval: 'month', name: 'Premium Monthly' };
+const DEFAULT_YEARLY: PlanPricing = { amount: 49.99, currency: 'AUD', interval: 'year', name: 'Premium Yearly' };
 
-const DEFAULT_PRICING: PricingData = {
-  monthly: { amount: 4.99, currency: 'AUD', interval: 'month', name: 'Premium Monthly' },
-  yearly: { amount: 49.99, currency: 'AUD', interval: 'year', name: 'Premium Yearly' },
-  free: { amount: 0, currency: 'AUD', interval: 'forever', name: 'Free' },
-};
+const FREE_FEATURES = [
+  '5 caption generations per month',
+  'Up to 2 platforms per generation',
+  '3 caption variants per platform',
+  'Basic analytics',
+  'All content types supported',
+  'Profile customization',
+];
 
-interface PlanType {
-  name: string;
-  tier: 'FREE' | 'PREMIUM';
-  price: number;
-  period: string;
-  currency?: string;
-  description: string;
-  features: string[];
-  limitations: string[];
-  buttonText: string;
-  highlighted: boolean;
-}
-
-const DEFAULT_PLANS: PlanType[] = [
-  {
-    name: 'Free',
-    tier: 'FREE',
-    price: 0,
-    period: 'forever',
-    currency: DEFAULT_PRICING.free.currency,
-    description: 'Perfect for trying out our caption generator',
-    features: [
-      '5 caption generations per month',
-      'Up to 2 platforms per generation',
-      '3 caption variants per platform',
-      'Basic analytics',
-      'All content types supported',
-      'Profile customization',
-    ],
-    limitations: [
-      'Limited to 5 generations/month',
-      'Maximum 2 platforms',
-    ],
-    buttonText: 'Current Plan',
-    highlighted: false,
-  },
-  {
-    name: DEFAULT_PRICING.monthly.name,
-    tier: 'PREMIUM',
-    price: DEFAULT_PRICING.monthly.amount,
-    period: DEFAULT_PRICING.monthly.interval,
-    currency: DEFAULT_PRICING.monthly.currency,
-    description: 'For serious content creators and businesses',
-    features: [
-      '100 caption generations per month',
-      'Unlimited platforms per generation',
-      '3 caption variants per platform',
-      'Advanced analytics & insights',
-      'All content types supported',
-      'Profile customization',
-      'Priority support',
-      'Early access to new features',
-    ],
-    limitations: [],
-    buttonText: 'Upgrade to Premium',
-    highlighted: true,
-  },
+const PREMIUM_FEATURES = [
+  '100 caption generations per month',
+  'Unlimited platforms per generation',
+  '3 caption variants per platform',
+  'Advanced analytics & insights',
+  'All content types supported',
+  'Profile customization',
+  'Priority support',
+  'Early access to new features',
 ];
 
 export default function Pricing() {
@@ -97,19 +49,30 @@ export default function Pricing() {
   const [showCancelConfirm, setShowCancelConfirm] = useState(false);
   const [cancelLoading, setCancelLoading] = useState(false);
   const [successMessage, setSuccessMessage] = useState('');
-  const [plans, setPlans] = useState<PlanType[]>(DEFAULT_PLANS);
   const [pricingLoading, setPricingLoading] = useState(true);
   const [billingInterval, setBillingInterval] = useState<'monthly' | 'yearly'>('monthly');
-  const [monthlyPrice, setMonthlyPrice] = useState(DEFAULT_PRICING.monthly.amount);
-  const [yearlyPrice, setYearlyPrice] = useState(DEFAULT_PRICING.yearly.amount);
-  const [currency, setCurrency] = useState(DEFAULT_PRICING.monthly.currency);
-  const formatCurrency = (curr: string) => (curr === 'USD' ? '$' : `${curr} `);
+  const [monthlyPrice, setMonthlyPrice] = useState(DEFAULT_MONTHLY.amount);
+  const [yearlyPrice, setYearlyPrice] = useState(DEFAULT_YEARLY.amount);
+  const [currency, setCurrency] = useState(DEFAULT_MONTHLY.currency);
+
+  const formatCurrency = (curr: string) => (curr === 'AUD' ? '$' : `${curr} `);
   const formatAmount = (amount: number) => (Number.isInteger(amount) ? amount.toFixed(0) : amount.toFixed(2));
   const savingsPercent = monthlyPrice
     ? Math.max(0, Math.round(((monthlyPrice * 12 - yearlyPrice) / (monthlyPrice * 12)) * 100))
     : 0;
 
-  const currentTier = user?.subscriptionTier || 'FREE';
+  const currentTier = (user?.subscriptionTier || 'FREE') as string;
+  const isFree = currentTier === 'FREE';
+  const isTrial = currentTier === 'TRIAL';
+  const isPremium = currentTier === 'PREMIUM';
+  const hasTrialed = user?.trialActivated || false;
+
+  // Trial days remaining
+  const trialDaysLeft = (() => {
+    if (!isTrial || !user?.trialEndsAt) return 0;
+    const diff = new Date(user.trialEndsAt).getTime() - Date.now();
+    return Math.max(0, Math.ceil(diff / (1000 * 60 * 60 * 24)));
+  })();
 
   // Fetch pricing from Stripe
   useEffect(() => {
@@ -117,39 +80,18 @@ export default function Pricing() {
       try {
         setPricingLoading(true);
         const response = await api.get('/payment/pricing');
-
         if (response?.data?.success && response?.data?.pricing) {
-          const { monthly, yearly, free } = response.data.pricing as PricingData;
-
-          // Store monthly and yearly prices
-          setMonthlyPrice(monthly?.amount ?? DEFAULT_PRICING.monthly.amount);
-          setYearlyPrice(yearly?.amount ?? DEFAULT_PRICING.yearly.amount);
-          setCurrency(monthly?.currency ?? DEFAULT_PRICING.monthly.currency);
-
-          // Update plans with actual Stripe pricing (monthly by default)
-          setPlans([
-            {
-              ...DEFAULT_PLANS[0],
-              price: free?.amount ?? DEFAULT_PRICING.free.amount,
-              currency: free?.currency ?? DEFAULT_PRICING.free.currency,
-            },
-            {
-              ...DEFAULT_PLANS[1],
-              price: monthly?.amount ?? DEFAULT_PRICING.monthly.amount,
-              period: monthly?.interval ?? DEFAULT_PRICING.monthly.interval,
-              currency: monthly?.currency ?? DEFAULT_PRICING.monthly.currency,
-              name: monthly?.name ?? DEFAULT_PRICING.monthly.name,
-            },
-          ]);
+          const { monthly, yearly } = response.data.pricing;
+          setMonthlyPrice(monthly?.amount ?? DEFAULT_MONTHLY.amount);
+          setYearlyPrice(yearly?.amount ?? DEFAULT_YEARLY.amount);
+          setCurrency(monthly?.currency ?? DEFAULT_MONTHLY.currency);
         }
       } catch (err) {
         console.error('Failed to fetch pricing:', err);
-        // Keep default plans if fetch fails
       } finally {
         setPricingLoading(false);
       }
     };
-
     fetchPricing();
   }, []);
 
@@ -160,7 +102,6 @@ export default function Pricing() {
     const sessionId = searchParams.get('session_id');
 
     if (success === 'true' && sessionId) {
-      // Verify the checkout session and upgrade the user
       verifyCheckout(sessionId);
     } else if (canceled === 'true') {
       setError('Payment was canceled. You can try again anytime.');
@@ -173,13 +114,17 @@ export default function Pricing() {
       const response = await api.post('/payment/verify-checkout-session', { sessionId });
 
       if (response.data.success) {
-        setSuccessMessage('Payment successful! Your Premium subscription is now active.');
+        const isTrialActivation = response.data.subscriptionTier === 'TRIAL';
+        setSuccessMessage(
+          isTrialActivation
+            ? 'Your 7-day free trial is now active! Enjoy full Premium features.'
+            : 'Payment successful! Your Premium subscription is now active.'
+        );
 
         // Fetch updated user data
         const userResponse = await api.get('/auth/me');
         dispatch(setUser(userResponse.data));
 
-        // Clear the session_id from URL after 2 seconds
         setTimeout(() => {
           window.history.replaceState({}, '', '/pricing');
         }, 2000);
@@ -194,21 +139,17 @@ export default function Pricing() {
     }
   };
 
-  const handleUpgrade = async (tier: string) => {
-    if (tier === currentTier) return;
-
+  const handleUpgrade = async () => {
     setLoading(true);
     setError('');
 
     try {
-      // Create Stripe checkout session with billing interval
       const response = await api.post('/payment/create-checkout-session', {
         billingInterval,
       });
       const { url } = response.data;
 
       if (url) {
-        // Redirect to Stripe checkout
         window.location.href = url;
       } else {
         setError('Failed to create checkout session. Please try again.');
@@ -224,19 +165,34 @@ export default function Pricing() {
   const handleCancelSubscription = async () => {
     setCancelLoading(true);
     try {
-      await api.post('/subscription/cancel');
-      alert('Subscription cancelled successfully! You have been downgraded to the Free plan.');
+      const response = await api.post('/subscription/cancel');
+      const message = response.data?.message || 'Subscription cancelled successfully.';
+
+      setSuccessMessage(message);
       setShowCancelConfirm(false);
 
-      // Refresh the page to update the user state
-      window.location.reload();
+      // Fetch updated user data
+      const userResponse = await api.get('/auth/me');
+      dispatch(setUser(userResponse.data));
     } catch (err: any) {
       console.error('Cancel error:', err);
-      alert(err.response?.data?.error || 'Failed to cancel subscription. Please try again.');
+      setError(err.response?.data?.error || 'Failed to cancel subscription. Please try again.');
     } finally {
       setCancelLoading(false);
     }
   };
+
+  // Determine Premium card CTA
+  const getPremiumCTA = () => {
+    if (isPremium) return { text: 'Current Plan', disabled: true };
+    if (isTrial) return { text: `On Trial (${trialDaysLeft}d left)`, disabled: true };
+    if (isFree && !hasTrialed) return { text: 'Start 7-Day Free Trial', disabled: false };
+    return { text: 'Subscribe to Premium', disabled: false };
+  };
+
+  const premiumCTA = getPremiumCTA();
+  const displayPrice = billingInterval === 'yearly' ? yearlyPrice : monthlyPrice;
+  const displayInterval = billingInterval === 'yearly' ? 'year' : 'month';
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-purple-50">
@@ -250,7 +206,7 @@ export default function Pricing() {
             animate={{ opacity: 1, y: 0 }}
             className="text-3xl font-bold text-gray-900 mb-2"
           >
-            Choose Your Plan
+            {isFree && !hasTrialed ? 'Start Your Free Trial' : 'Choose Your Plan'}
           </motion.h2>
           <motion.p
             initial={{ opacity: 0, y: -20 }}
@@ -258,33 +214,44 @@ export default function Pricing() {
             transition={{ delay: 0.1 }}
             className="text-base text-gray-600"
           >
-            Start free, upgrade when you need more
+            {isFree && !hasTrialed
+              ? '7 days of full Premium access, no charge until trial ends'
+              : 'Unlock unlimited captions with Premium'}
           </motion.p>
         </div>
 
         {/* Current Tier Badge */}
-        {currentTier && (
-          <motion.div
-            initial={{ opacity: 0, y: -20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.2 }}
-            className="text-center mb-6"
-          >
-            <span className="inline-flex items-center gap-2 px-4 py-2 bg-indigo-100 text-indigo-700 rounded-full text-sm font-semibold">
-              {currentTier === 'PREMIUM' ? (
-                <>
-                  <Crown className="w-4 h-4" />
-                  You're on Premium
-                </>
-              ) : (
-                <>
-                  <Zap className="w-4 h-4" />
-                  You're on Free Plan
-                </>
-              )}
-            </span>
-          </motion.div>
-        )}
+        <motion.div
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.2 }}
+          className="text-center mb-6"
+        >
+          <span className={`inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-semibold ${
+            isPremium
+              ? 'bg-purple-100 text-purple-700'
+              : isTrial
+                ? 'bg-amber-100 text-amber-700'
+                : 'bg-indigo-100 text-indigo-700'
+          }`}>
+            {isPremium ? (
+              <>
+                <Crown className="w-4 h-4" />
+                You're on Premium
+              </>
+            ) : isTrial ? (
+              <>
+                <Clock className="w-4 h-4" />
+                Trial: {trialDaysLeft} day{trialDaysLeft !== 1 ? 's' : ''} remaining
+              </>
+            ) : (
+              <>
+                <Zap className="w-4 h-4" />
+                You're on the Free Plan
+              </>
+            )}
+          </span>
+        </motion.div>
 
         {/* Success Message */}
         {successMessage && (
@@ -349,133 +316,191 @@ export default function Pricing() {
           </div>
         ) : (
           <div className="grid md:grid-cols-2 gap-6 max-w-5xl mx-auto">
-            {plans.map((plan, index) => {
-            const isCurrentPlan = plan.tier === currentTier;
-            const canUpgrade = plan.tier === 'PREMIUM' && currentTier === 'FREE';
-
-            return (
-              <motion.div
-                key={plan.tier}
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.3 + index * 0.1 }}
-                className={`relative bg-white rounded-xl shadow-lg overflow-hidden border-2 ${
-                  plan.highlighted
-                    ? 'border-indigo-500'
-                    : isCurrentPlan
-                    ? 'border-green-500'
-                    : 'border-gray-100'
-                }`}
-              >
-                {/* Highlight Badge */}
-                {plan.highlighted && (
-                  <div className="absolute top-0 right-0 bg-gradient-to-r from-indigo-600 to-purple-600 text-white px-3 py-1 text-xs font-bold rounded-bl-lg">
-                    MOST POPULAR
-                  </div>
-                )}
-
-                {/* Current Plan Badge */}
-                {isCurrentPlan && (
-                  <div className="absolute top-0 right-0 bg-green-500 text-white px-3 py-1 text-xs font-bold rounded-bl-lg">
-                    CURRENT PLAN
-                  </div>
-                )}
-
-                <div className="p-6">
-                  {/* Plan Header */}
-                  <div className="mb-5">
-                    <h3 className="text-xl font-bold text-gray-900 mb-1.5">{plan.name}</h3>
-                    <p className="text-gray-600 text-sm mb-3">{plan.description}</p>
-                    <div className="flex items-baseline gap-2">
-                      <span className="text-4xl font-bold text-gray-900">
-                        {plan.tier === 'PREMIUM' ? (
-                          <>
-                            {formatCurrency(currency)}
-                            {formatAmount(billingInterval === 'yearly' ? yearlyPrice : monthlyPrice)}
-                          </>
-                        ) : (
-                          <>
-                            {formatCurrency(plan.currency || currency)}
-                            {formatAmount(plan.price)}
-                          </>
-                        )}
-                      </span>
-                      <span className="text-gray-600 text-sm">
-                        / {plan.tier === 'PREMIUM' ? (billingInterval === 'yearly' ? 'year' : 'month') : plan.period}
-                      </span>
-                    </div>
-                    {plan.tier === 'PREMIUM' && billingInterval === 'yearly' && (
-                      <p className="text-green-600 text-sm mt-2 font-medium">
-                        {formatCurrency(currency)}{formatAmount(yearlyPrice / 12)}/month when billed annually
-                      </p>
-                    )}
-                  </div>
-
-                  {/* Features List */}
-                  <div className="mb-5 space-y-2.5">
-                    <p className="text-sm font-semibold text-gray-900 mb-2">What's included:</p>
-                    {plan.features.map((feature, idx) => (
-                      <div key={idx} className="flex items-start gap-2.5">
-                        <Check className="w-4 h-4 text-green-500 flex-shrink-0 mt-0.5" />
-                        <span className="text-gray-700 text-sm">{feature}</span>
-                      </div>
-                    ))}
-                  </div>
-
-                  {/* CTA Button */}
-                  <div>
-                    <motion.button
-                      onClick={() => canUpgrade && handleUpgrade(plan.tier)}
-                      disabled={isCurrentPlan || loading || !canUpgrade}
-                      whileHover={canUpgrade && !loading ? { scale: 1.02 } : {}}
-                      whileTap={canUpgrade && !loading ? { scale: 0.98 } : {}}
-                      className={`w-full py-3 rounded-lg font-semibold transition-all flex items-center justify-center gap-2 ${
-                        isCurrentPlan
-                          ? 'bg-gray-200 text-gray-500 cursor-not-allowed'
-                          : canUpgrade
-                          ? 'bg-gradient-to-r from-indigo-600 to-purple-600 text-white hover:shadow-lg'
-                          : 'bg-gray-100 text-gray-400 cursor-not-allowed'
-                      }`}
-                    >
-                      {loading && canUpgrade ? (
-                        <>
-                          <Loader2 className="w-5 h-5 animate-spin" />
-                          Processing...
-                        </>
-                      ) : isCurrentPlan ? (
-                        'Current Plan'
-                      ) : canUpgrade ? (
-                        <>
-                          <Crown className="w-5 h-5" />
-                          {plan.buttonText}
-                        </>
-                      ) : (
-                        plan.buttonText
-                      )}
-                    </motion.button>
-
-                    {/* Cancel Link - Show only for current Premium plan */}
-                    {isCurrentPlan && plan.tier === 'PREMIUM' && (
-                      <button
-                        onClick={() => setShowCancelConfirm(true)}
-                        className="block w-full text-center mt-3 text-sm text-red-600 hover:text-red-700 font-medium"
-                      >
-                        Cancel Plan
-                      </button>
-                    )}
+            {/* Free Plan Card */}
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.3 }}
+              className={`relative bg-white rounded-xl shadow-lg overflow-hidden border-2 ${
+                isFree ? 'border-green-500' : 'border-gray-100'
+              }`}
+            >
+              {isFree && (
+                <div className="absolute top-0 right-0 bg-green-500 text-white px-3 py-1 text-xs font-bold rounded-bl-lg">
+                  CURRENT PLAN
+                </div>
+              )}
+              <div className="p-6">
+                <div className="mb-5">
+                  <h3 className="text-xl font-bold text-gray-900 mb-1.5">Free</h3>
+                  <p className="text-gray-600 text-sm mb-3">Perfect for trying out our caption generator</p>
+                  <div className="flex items-baseline gap-2">
+                    <span className="text-4xl font-bold text-gray-900">{formatCurrency(currency)}0</span>
+                    <span className="text-gray-600 text-sm">/ forever</span>
                   </div>
                 </div>
-              </motion.div>
-            );
-          })}
+                <div className="mb-5 space-y-2.5">
+                  <p className="text-sm font-semibold text-gray-900 mb-2">What's included:</p>
+                  {FREE_FEATURES.map((feature, idx) => (
+                    <div key={idx} className="flex items-start gap-2.5">
+                      <Check className="w-4 h-4 text-green-500 flex-shrink-0 mt-0.5" />
+                      <span className="text-gray-700 text-sm">{feature}</span>
+                    </div>
+                  ))}
+                </div>
+                <button
+                  disabled
+                  className="w-full py-3 rounded-lg font-semibold bg-gray-200 text-gray-500 cursor-not-allowed"
+                >
+                  {isFree ? 'Current Plan' : 'Free Plan'}
+                </button>
+              </div>
+            </motion.div>
+
+            {/* Premium Plan Card */}
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.4 }}
+              className={`relative bg-white rounded-xl shadow-lg overflow-hidden border-2 ${
+                isPremium
+                  ? 'border-green-500'
+                  : isTrial
+                    ? 'border-amber-500'
+                    : 'border-indigo-500'
+              }`}
+            >
+              {/* Badge */}
+              {isPremium ? (
+                <div className="absolute top-0 right-0 bg-green-500 text-white px-3 py-1 text-xs font-bold rounded-bl-lg">
+                  CURRENT PLAN
+                </div>
+              ) : isTrial ? (
+                <div className="absolute top-0 right-0 bg-amber-500 text-white px-3 py-1 text-xs font-bold rounded-bl-lg">
+                  ON TRIAL
+                </div>
+              ) : (
+                <div className="absolute top-0 right-0 bg-gradient-to-r from-indigo-600 to-purple-600 text-white px-3 py-1 text-xs font-bold rounded-bl-lg">
+                  {!hasTrialed ? '7-DAY FREE TRIAL' : 'MOST POPULAR'}
+                </div>
+              )}
+
+              <div className="p-6">
+                <div className="mb-5">
+                  <h3 className="text-xl font-bold text-gray-900 mb-1.5">Premium</h3>
+                  <p className="text-gray-600 text-sm mb-3">
+                    {!hasTrialed && isFree
+                      ? 'Try free for 7 days, then auto-renews'
+                      : 'For serious content creators and businesses'}
+                  </p>
+                  <div className="flex items-baseline gap-2">
+                    <span className="text-4xl font-bold text-gray-900">
+                      {formatCurrency(currency)}{formatAmount(displayPrice)}
+                    </span>
+                    <span className="text-gray-600 text-sm">/ {displayInterval}</span>
+                  </div>
+                  {billingInterval === 'yearly' && (
+                    <p className="text-green-600 text-sm mt-2 font-medium">
+                      {formatCurrency(currency)}{formatAmount(yearlyPrice / 12)}/month when billed annually
+                    </p>
+                  )}
+                  {!hasTrialed && isFree && (
+                    <p className="text-indigo-600 text-sm mt-2 font-medium">
+                      First 7 days free - cancel anytime, no charge
+                    </p>
+                  )}
+                </div>
+
+                <div className="mb-5 space-y-2.5">
+                  <p className="text-sm font-semibold text-gray-900 mb-2">What's included:</p>
+                  {PREMIUM_FEATURES.map((feature, idx) => (
+                    <div key={idx} className="flex items-start gap-2.5">
+                      <Check className="w-4 h-4 text-green-500 flex-shrink-0 mt-0.5" />
+                      <span className="text-gray-700 text-sm">{feature}</span>
+                    </div>
+                  ))}
+                </div>
+
+                <div>
+                  <motion.button
+                    onClick={() => !premiumCTA.disabled && handleUpgrade()}
+                    disabled={premiumCTA.disabled || loading}
+                    whileHover={!premiumCTA.disabled && !loading ? { scale: 1.02 } : {}}
+                    whileTap={!premiumCTA.disabled && !loading ? { scale: 0.98 } : {}}
+                    className={`w-full py-3 rounded-lg font-semibold transition-all flex items-center justify-center gap-2 ${
+                      premiumCTA.disabled
+                        ? 'bg-gray-200 text-gray-500 cursor-not-allowed'
+                        : 'bg-gradient-to-r from-indigo-600 to-purple-600 text-white hover:shadow-lg'
+                    }`}
+                  >
+                    {loading ? (
+                      <>
+                        <Loader2 className="w-5 h-5 animate-spin" />
+                        Processing...
+                      </>
+                    ) : (
+                      <>
+                        {!premiumCTA.disabled && <Crown className="w-5 h-5" />}
+                        {premiumCTA.text}
+                      </>
+                    )}
+                  </motion.button>
+
+                  {/* Cancel Link - Show for TRIAL or PREMIUM */}
+                  {(isTrial || isPremium) && (
+                    <button
+                      onClick={() => setShowCancelConfirm(true)}
+                      className="block w-full text-center mt-3 text-sm text-red-600 hover:text-red-700 font-medium"
+                    >
+                      {isTrial ? 'Cancel Trial' : 'Cancel Subscription'}
+                    </button>
+                  )}
+                </div>
+              </div>
+            </motion.div>
           </div>
+        )}
+
+        {/* How Trial Works - Show for free users who haven't trialed */}
+        {isFree && !hasTrialed && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.5 }}
+            className="mt-10 max-w-3xl mx-auto"
+          >
+            <h3 className="text-xl font-bold text-gray-900 mb-4 text-center">How the Free Trial Works</h3>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="bg-white rounded-lg p-5 shadow-sm border border-gray-100 text-center">
+                <div className="w-10 h-10 bg-indigo-100 rounded-full flex items-center justify-center mx-auto mb-3">
+                  <span className="text-indigo-600 font-bold">1</span>
+                </div>
+                <h4 className="font-semibold text-gray-900 mb-1">Start Your Trial</h4>
+                <p className="text-gray-600 text-sm">Enter your card details. You won't be charged today.</p>
+              </div>
+              <div className="bg-white rounded-lg p-5 shadow-sm border border-gray-100 text-center">
+                <div className="w-10 h-10 bg-indigo-100 rounded-full flex items-center justify-center mx-auto mb-3">
+                  <span className="text-indigo-600 font-bold">2</span>
+                </div>
+                <h4 className="font-semibold text-gray-900 mb-1">Enjoy 7 Days Free</h4>
+                <p className="text-gray-600 text-sm">Full Premium access - 100 captions, unlimited platforms.</p>
+              </div>
+              <div className="bg-white rounded-lg p-5 shadow-sm border border-gray-100 text-center">
+                <div className="w-10 h-10 bg-indigo-100 rounded-full flex items-center justify-center mx-auto mb-3">
+                  <span className="text-indigo-600 font-bold">3</span>
+                </div>
+                <h4 className="font-semibold text-gray-900 mb-1">Auto-Renews</h4>
+                <p className="text-gray-600 text-sm">After 7 days, your plan starts at {formatCurrency(currency)}{formatAmount(monthlyPrice)}/month. Cancel anytime.</p>
+              </div>
+            </div>
+          </motion.div>
         )}
 
         {/* FAQ Section */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.5 }}
+          transition={{ delay: 0.6 }}
           className="mt-12 max-w-3xl mx-auto"
         >
           <h3 className="text-xl font-bold text-gray-900 mb-4 text-center">
@@ -483,42 +508,34 @@ export default function Pricing() {
           </h3>
           <div className="space-y-3">
             <div className="bg-white rounded-lg p-5 shadow-sm border border-gray-100">
-              <h4 className="font-semibold text-gray-900 mb-1.5">
-                Can I cancel my subscription?
-              </h4>
+              <h4 className="font-semibold text-gray-900 mb-1.5">Will I be charged during the trial?</h4>
               <p className="text-gray-600 text-sm">
-                Yes! You can cancel your Premium subscription anytime from your Profile page. When you cancel, you'll be downgraded to the Free plan with 5 generations per month.
+                No! Your card is only saved for when the trial ends. You won't be charged a single cent during the 7-day trial period.
               </p>
             </div>
             <div className="bg-white rounded-lg p-5 shadow-sm border border-gray-100">
-              <h4 className="font-semibold text-gray-900 mb-1.5">
-                Can I switch between plans?
-              </h4>
+              <h4 className="font-semibold text-gray-900 mb-1.5">What happens after the trial ends?</h4>
               <p className="text-gray-600 text-sm">
-                Yes! You can upgrade from Free to Premium at any time. Your upgrade takes effect immediately.
+                Your subscription automatically starts at {formatCurrency(currency)}{formatAmount(monthlyPrice)}/month (or {formatCurrency(currency)}{formatAmount(yearlyPrice)}/year if you chose yearly). You'll keep full Premium access with no interruption.
               </p>
             </div>
             <div className="bg-white rounded-lg p-5 shadow-sm border border-gray-100">
-              <h4 className="font-semibold text-gray-900 mb-1.5">
-                What happens to my usage when I upgrade?
-              </h4>
+              <h4 className="font-semibold text-gray-900 mb-1.5">Can I cancel during the trial?</h4>
               <p className="text-gray-600 text-sm">
-                When you upgrade to Premium, your monthly limit increases to 100 generations immediately. Your current month's usage carries over.
+                Absolutely! Cancel anytime during your trial and you won't be charged. You'll be moved back to the free plan immediately.
               </p>
             </div>
             <div className="bg-white rounded-lg p-5 shadow-sm border border-gray-100">
-              <h4 className="font-semibold text-gray-900 mb-1.5">
-                How does billing work?
-              </h4>
+              <h4 className="font-semibold text-gray-900 mb-1.5">What if my payment fails after the trial?</h4>
               <p className="text-gray-600 text-sm">
-                Premium is billed monthly at {formatCurrency(currency)}{formatAmount(monthlyPrice)}/month. Your subscription automatically renews until you cancel.
+                We'll retry your payment a few times over 7 days. If it still fails, you'll be moved to the free plan. You can update your payment method and re-subscribe anytime.
               </p>
             </div>
           </div>
         </motion.div>
       </main>
 
-      {/* Cancel Subscription Confirmation Modal */}
+      {/* Cancel Confirmation Modal */}
       {showCancelConfirm && (
         <motion.div
           initial={{ opacity: 0 }}
@@ -533,31 +550,38 @@ export default function Pricing() {
             onClick={(e) => e.stopPropagation()}
           >
             <div className="text-center mb-5">
-              <div className="w-14 h-14 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-3">
-                <Crown className="w-7 h-7 text-red-600" />
+              <div className={`w-14 h-14 rounded-full flex items-center justify-center mx-auto mb-3 ${
+                isTrial ? 'bg-amber-100' : 'bg-red-100'
+              }`}>
+                {isTrial ? (
+                  <Clock className="w-7 h-7 text-amber-600" />
+                ) : (
+                  <Crown className="w-7 h-7 text-red-600" />
+                )}
               </div>
-              <h3 className="text-xl font-bold text-gray-900 mb-2">Cancel Premium?</h3>
+              <h3 className="text-xl font-bold text-gray-900 mb-2">
+                {isTrial ? 'Cancel Trial?' : 'Cancel Subscription?'}
+              </h3>
               <p className="text-sm text-gray-600">
-                Are you sure you want to cancel your Premium subscription?
+                {isTrial
+                  ? "You won't be charged. You'll be moved to the free plan immediately."
+                  : `You'll keep Premium access until your current billing period ends${user?.subscriptionTier === 'PREMIUM' ? '.' : '.'}`}
               </p>
             </div>
 
             <div className="bg-gray-50 rounded-lg p-3 mb-5 space-y-1.5">
+              <p className="text-xs font-semibold text-gray-500 mb-1">On the free plan, you'll lose:</p>
               <div className="flex items-start gap-2 text-sm text-gray-700">
-                <span className="text-red-500 font-bold">✗</span>
-                <span>Monthly limit reduced to 10 generations</span>
+                <X className="w-4 h-4 text-red-500 flex-shrink-0 mt-0.5" />
+                <span>100 monthly generations (reduced to 5)</span>
               </div>
               <div className="flex items-start gap-2 text-sm text-gray-700">
-                <span className="text-red-500 font-bold">✗</span>
-                <span>Platform selection limited to 4</span>
+                <X className="w-4 h-4 text-red-500 flex-shrink-0 mt-0.5" />
+                <span>Unlimited platform selection (reduced to 2)</span>
               </div>
               <div className="flex items-start gap-2 text-sm text-gray-700">
-                <span className="text-red-500 font-bold">✗</span>
-                <span>No priority support</span>
-              </div>
-              <div className="flex items-start gap-2 text-sm text-gray-700">
-                <span className="text-red-500 font-bold">✗</span>
-                <span>No early access to new features</span>
+                <X className="w-4 h-4 text-red-500 flex-shrink-0 mt-0.5" />
+                <span>Priority support & early access</span>
               </div>
             </div>
 
@@ -567,7 +591,7 @@ export default function Pricing() {
                 disabled={cancelLoading}
                 className="flex-1 px-4 py-3 bg-gray-200 text-gray-700 rounded-lg font-semibold hover:bg-gray-300 transition-colors disabled:opacity-50"
               >
-                Keep Premium
+                {isTrial ? 'Keep Trial' : 'Keep Premium'}
               </button>
               <button
                 onClick={handleCancelSubscription}

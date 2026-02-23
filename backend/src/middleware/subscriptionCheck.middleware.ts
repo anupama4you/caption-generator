@@ -5,15 +5,14 @@ import { getMonthlyLimit } from '../config/subscription.config';
 
 /**
  * Middleware to check and enforce subscription expiration
- * Auto-downgrades expired PREMIUM subscriptions to FREE
+ * Auto-downgrades expired PREMIUM/TRIAL subscriptions to FREE
  */
 export const checkSubscriptionExpiry = async (
   req: AuthRequest,
-  res: Response,
+  _res: Response,
   next: NextFunction
 ): Promise<Response | void> => {
   try {
-    // Skip if no authenticated user
     if (!req.user) {
       return next();
     }
@@ -31,50 +30,45 @@ export const checkSubscriptionExpiry = async (
       return next();
     }
 
-    // Check if PREMIUM subscription has expired
+    const tier = user.subscriptionTier;
+
+    // Check if PREMIUM or TRIAL subscription has expired
     if (
-      user.subscriptionTier === 'PREMIUM' &&
+      (tier === 'PREMIUM' || tier === 'TRIAL') &&
       user.subscriptionEnd &&
       new Date() > new Date(user.subscriptionEnd)
     ) {
-      // Auto-downgrade to FREE
       await downgradeExpiredSubscription(user.id);
-
-      // Update the user in the request to reflect the downgrade
       req.user.subscriptionTier = 'FREE';
-
-      console.log(`User ${user.id} auto-downgraded due to expired subscription`);
+      console.log(`User ${user.id} auto-downgraded due to expired subscription/trial`);
     }
 
     return next();
   } catch (error) {
     console.error('Subscription expiry check error:', error);
-    // Don't block the request on error, just log it
     return next();
   }
 };
 
 /**
- * Downgrade a user from PREMIUM to FREE
+ * Downgrade a user from PREMIUM/TRIAL to FREE
  */
 async function downgradeExpiredSubscription(userId: string): Promise<void> {
   const now = new Date();
   const currentMonth = now.getMonth() + 1;
   const currentYear = now.getFullYear();
 
-  // Update user subscription tier
   await prisma.user.update({
     where: { id: userId },
     data: {
       subscriptionTier: 'FREE',
       subscriptionStart: null,
       subscriptionEnd: null,
-      // Keep stripeCustomerId for future purchases
       stripeSubscriptionId: null,
     },
   });
 
-  // Update usage limit for current month
+  const freeLimit = getMonthlyLimit('FREE');
   await prisma.usageTracking.upsert({
     where: {
       userId_month_year: {
@@ -83,22 +77,19 @@ async function downgradeExpiredSubscription(userId: string): Promise<void> {
         year: currentYear,
       },
     },
-    update: {
-      monthlyLimit: getMonthlyLimit('FREE'),
-    },
+    update: { monthlyLimit: freeLimit },
     create: {
       userId,
       month: currentMonth,
       year: currentYear,
       captionsGenerated: 0,
-      monthlyLimit: getMonthlyLimit('FREE'),
+      monthlyLimit: freeLimit,
     },
   });
 }
 
 /**
- * Utility function to check if a user's subscription is active
- * Can be used in services/controllers where middleware is not applicable
+ * Check if a user's subscription is active
  */
 export const isSubscriptionActive = async (userId: string): Promise<boolean> => {
   const user = await prisma.user.findUnique({
@@ -109,17 +100,13 @@ export const isSubscriptionActive = async (userId: string): Promise<boolean> => 
     },
   });
 
-  if (!user) {
-    return false;
-  }
+  if (!user) return false;
 
-  // FREE tier is always "active"
-  if (user.subscriptionTier === 'FREE') {
-    return true;
-  }
+  const tier = user.subscriptionTier;
 
-  // PREMIUM tier requires valid subscription end date
-  if (user.subscriptionTier === 'PREMIUM' && user.subscriptionEnd) {
+  if (tier === 'FREE') return true;
+
+  if ((tier === 'PREMIUM' || tier === 'TRIAL') && user.subscriptionEnd) {
     return new Date() <= new Date(user.subscriptionEnd);
   }
 

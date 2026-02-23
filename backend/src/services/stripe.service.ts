@@ -1,5 +1,6 @@
 import Stripe from 'stripe';
 import { config } from '../config/env';
+import { TRIAL_DURATION_DAYS } from '../config/subscription.config';
 
 if (!config.stripeSecretKey) {
   throw new Error('STRIPE_SECRET_KEY is not defined in environment variables');
@@ -19,7 +20,8 @@ export class StripeService {
     userEmail: string,
     successUrl: string,
     cancelUrl: string,
-    billingInterval: 'monthly' | 'yearly' = 'monthly'
+    billingInterval: 'monthly' | 'yearly' = 'monthly',
+    includeTrial: boolean = false
   ): Promise<Stripe.Checkout.Session> {
     try {
       // Select the correct price ID based on billing interval
@@ -53,6 +55,7 @@ export class StripeService {
             userId,
             billingInterval,
           },
+          ...(includeTrial ? { trial_period_days: TRIAL_DURATION_DAYS } : {}),
         },
       });
 
@@ -73,6 +76,21 @@ export class StripeService {
     } catch (error) {
       console.error('Error canceling subscription:', error);
       throw new Error('Failed to cancel subscription');
+    }
+  }
+
+  /**
+   * Cancel a subscription at the end of the billing period (for paid subscribers)
+   */
+  async cancelSubscriptionAtPeriodEnd(subscriptionId: string): Promise<Stripe.Subscription> {
+    try {
+      const subscription = await stripe.subscriptions.update(subscriptionId, {
+        cancel_at_period_end: true,
+      });
+      return subscription;
+    } catch (error) {
+      console.error('Error scheduling subscription cancellation:', error);
+      throw new Error('Failed to schedule subscription cancellation');
     }
   }
 

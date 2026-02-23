@@ -16,7 +16,6 @@ export class WebhookController {
     }
 
     try {
-      // Construct the event from the raw body
       const event = stripeService.constructWebhookEvent(
         req.body,
         signature as string
@@ -24,7 +23,6 @@ export class WebhookController {
 
       console.log(`Webhook received: ${event.type}`);
 
-      // Handle the event
       switch (event.type) {
         case 'checkout.session.completed':
           await this.handleCheckoutSessionCompleted(event.data.object as Stripe.Checkout.Session);
@@ -36,6 +34,10 @@ export class WebhookController {
 
         case 'customer.subscription.deleted':
           await this.handleSubscriptionDeleted(event.data.object as Stripe.Subscription);
+          break;
+
+        case 'customer.subscription.trial_will_end':
+          await this.handleTrialWillEnd(event.data.object as Stripe.Subscription);
           break;
 
         case 'invoice.payment_succeeded':
@@ -59,6 +61,7 @@ export class WebhookController {
 
   /**
    * Handle successful checkout session
+   * Supports both trial and immediate-payment checkouts
    */
   private async handleCheckoutSessionCompleted(session: Stripe.Checkout.Session) {
     const userId = session.client_reference_id || session.metadata?.userId;
@@ -72,28 +75,40 @@ export class WebhookController {
 
     console.log(`Checkout completed for user ${userId}`);
 
-    // Calculate subscription dates
+    // Retrieve subscription to check if it's a trial
+    const subscription = await stripeService.getSubscription(subscriptionId);
+    const isTrialing = subscription.status === 'trialing';
+
     const now = new Date();
-    const subscriptionEnd = new Date(now);
-    subscriptionEnd.setMonth(subscriptionEnd.getMonth() + 1);
+    const trialEndsAt = isTrialing && subscription.trial_end
+      ? new Date(subscription.trial_end * 1000)
+      : null;
+
+    const tier = isTrialing ? 'TRIAL' : 'PREMIUM';
+    const periodEnd = subscription.items.data[0]?.current_period_end;
+    const subscriptionEnd = isTrialing
+      ? trialEndsAt
+      : periodEnd ? new Date(periodEnd * 1000) : new Date();
 
     // Update user subscription
     await prisma.user.update({
       where: { id: userId },
       data: {
-        subscriptionTier: 'PREMIUM',
+        subscriptionTier: tier,
         subscriptionStart: now,
-        subscriptionEnd: subscriptionEnd,
+        subscriptionEnd,
         stripeCustomerId: customerId,
         stripeSubscriptionId: subscriptionId,
+        trialEndsAt,
+        trialActivated: true,
       },
     });
 
-    // Update usage tracking for current month
+    // Update usage tracking to Premium limits
     const currentMonth = now.getMonth() + 1;
     const currentYear = now.getFullYear();
-
     const premiumLimit = getMonthlyLimit('PREMIUM');
+
     await prisma.usageTracking.upsert({
       where: {
         userId_month_year: {
@@ -102,9 +117,7 @@ export class WebhookController {
           year: currentYear,
         },
       },
-      update: {
-        monthlyLimit: premiumLimit,
-      },
+      update: { monthlyLimit: premiumLimit },
       create: {
         userId,
         month: currentMonth,
@@ -114,11 +127,12 @@ export class WebhookController {
       },
     });
 
-    console.log(`User ${userId} upgraded to PREMIUM`);
+    console.log(`User ${userId} ${isTrialing ? 'started TRIAL' : 'upgraded to PREMIUM'}`);
   }
 
   /**
    * Handle subscription updates
+   * Key: detects trial → active (paid) transition
    */
   private async handleSubscriptionUpdated(subscription: Stripe.Subscription) {
     const userId = subscription.metadata?.userId;
@@ -128,15 +142,33 @@ export class WebhookController {
       return;
     }
 
-    console.log(`Subscription updated for user ${userId}`);
+    console.log(`Subscription updated for user ${userId}, status: ${subscription.status}`);
 
-    // Log subscription update for monitoring
-    // The subscription dates are managed during checkout completion
-    // This handler can be extended for additional subscription update logic
+    if (subscription.status === 'active') {
+      // Trial ended and payment succeeded → upgrade to PREMIUM
+      const user = await prisma.user.findUnique({ where: { id: userId } });
+      if (user?.subscriptionTier === 'TRIAL') {
+        await prisma.user.update({
+          where: { id: userId },
+          data: {
+            subscriptionTier: 'PREMIUM',
+            subscriptionEnd: subscription.items.data[0]?.current_period_end
+              ? new Date(subscription.items.data[0].current_period_end * 1000)
+              : new Date(),
+            trialEndsAt: null,
+          },
+        });
+        console.log(`User ${userId} trial converted to PREMIUM`);
+      }
+    } else if (subscription.status === 'past_due') {
+      // Payment failed after trial - Stripe will retry automatically
+      console.log(`Payment past due for user ${userId} - Stripe will retry`);
+    }
   }
 
   /**
    * Handle subscription cancellation/deletion
+   * Covers: trial cancel, paid cancel, payment failure exhaustion
    */
   private async handleSubscriptionDeleted(subscription: Stripe.Subscription) {
     const userId = subscription.metadata?.userId;
@@ -156,6 +188,7 @@ export class WebhookController {
         subscriptionStart: null,
         subscriptionEnd: null,
         stripeSubscriptionId: null,
+        trialEndsAt: null,
       },
     });
 
@@ -163,8 +196,9 @@ export class WebhookController {
     const now = new Date();
     const currentMonth = now.getMonth() + 1;
     const currentYear = now.getFullYear();
+    const freeLimit = getMonthlyLimit('FREE');
 
-    await prisma.usageTracking.update({
+    await prisma.usageTracking.upsert({
       where: {
         userId_month_year: {
           userId,
@@ -172,8 +206,13 @@ export class WebhookController {
           year: currentYear,
         },
       },
-      data: {
-        monthlyLimit: getMonthlyLimit('FREE'),
+      update: { monthlyLimit: freeLimit },
+      create: {
+        userId,
+        month: currentMonth,
+        year: currentYear,
+        captionsGenerated: 0,
+        monthlyLimit: freeLimit,
       },
     });
 
@@ -181,18 +220,34 @@ export class WebhookController {
   }
 
   /**
+   * Handle trial ending soon (fires 3 days before trial ends)
+   */
+  private async handleTrialWillEnd(subscription: Stripe.Subscription) {
+    const userId = subscription.metadata?.userId;
+    if (!userId) return;
+
+    console.log(`Trial ending soon for user ${userId}`);
+    // Future: send reminder email via email.service.ts
+  }
+
+  /**
    * Handle successful payment
    */
   private async handleInvoicePaymentSucceeded(invoice: Stripe.Invoice) {
     console.log(`Payment succeeded for invoice ${invoice.id}`);
-    // Can add additional logic here if needed (e.g., send receipt email)
+    // Future: send receipt email
   }
 
   /**
    * Handle failed payment
    */
   private async handleInvoicePaymentFailed(invoice: Stripe.Invoice) {
-    console.log(`Payment failed for invoice ${invoice.id}`);
-    // Can add logic to notify user about failed payment
+    const sub = invoice.parent?.subscription_details?.subscription;
+    const subscriptionId = typeof sub === 'string' ? sub : sub?.id;
+    if (!subscriptionId) return;
+
+    console.log(`Payment failed for invoice ${invoice.id}, subscription ${subscriptionId}`);
+    // Stripe retries automatically per dashboard settings
+    // Future: send payment failure notification email
   }
 }

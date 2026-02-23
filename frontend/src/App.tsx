@@ -14,6 +14,7 @@ import Pricing from './pages/Pricing';
 import ForgotPassword from './pages/ForgotPassword';
 import ResetPassword from './pages/ResetPassword';
 import { ErrorBoundary } from './components/common/ErrorBoundary';
+import ServerDownOverlay from './components/common/ServerDownOverlay';
 
 function App() {
   const dispatch = useDispatch();
@@ -47,6 +48,7 @@ function App() {
 
   return (
     <ErrorBoundary>
+      <ServerDownOverlay />
       <Routes>
         {/* Dashboard is now the landing page for everyone */}
         <Route path="/" element={<Dashboard />} />

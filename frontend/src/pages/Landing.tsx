@@ -232,7 +232,7 @@ export default function Landing() {
                 to="/register"
                 className="inline-flex items-center gap-2 bg-gradient-to-r from-indigo-600 to-purple-600 text-white px-8 py-4 rounded-xl text-lg font-semibold hover:shadow-xl transition-all transform hover:scale-105 w-full sm:w-auto justify-center"
               >
-                Generate 5 Captions Free
+                Start Free Trial
                 <ArrowRight className="w-5 h-5" />
               </Link>
               <a
@@ -249,15 +249,15 @@ export default function Landing() {
             >
               <div className="flex items-center gap-2">
                 <Check className="w-5 h-5 text-green-500" />
-                No credit card required
+                7-day free trial
               </div>
               <div className="flex items-center gap-2">
                 <Check className="w-5 h-5 text-green-500" />
-                5 free captions
+                Full Premium access
               </div>
               <div className="flex items-center gap-2">
                 <Check className="w-5 h-5 text-green-500" />
-                Cancel anytime
+                Cancel anytime, no charge
               </div>
             </motion.div>
           </motion.div>
@@ -579,7 +579,7 @@ export default function Landing() {
                     to="/register"
                     className="block text-center w-full py-4 rounded-xl font-bold transition-all bg-gray-100 text-gray-900 hover:bg-gray-200 text-lg"
                   >
-                    Generate 5 Captions Free
+                    Start Free Trial
                   </Link>
                 </motion.div>
 
@@ -590,13 +590,13 @@ export default function Landing() {
                   className="relative bg-gradient-to-br from-indigo-600 to-purple-600 rounded-3xl shadow-2xl overflow-hidden border-2 border-indigo-400 p-6 sm:p-8 transition-all"
                 >
                   <div className="absolute top-0 right-0 bg-yellow-400 text-gray-900 px-6 py-2 text-sm font-bold rounded-bl-2xl">
-                    MOST POPULAR
+                    7-DAY FREE TRIAL
                   </div>
 
                   <div className="mb-8">
                     <h4 className="text-3xl font-bold text-white mb-2">Premium</h4>
                     <p className="text-indigo-100 mb-6">
-                      For serious content creators and businesses
+                      Try free for 7 days, then auto-renews
                     </p>
                     <div className="flex items-baseline gap-2">
                       <span className="text-6xl font-bold text-white">
@@ -648,7 +648,7 @@ export default function Landing() {
                     className="flex items-center justify-center gap-2 w-full py-4 rounded-xl font-bold transition-all bg-white text-indigo-600 hover:bg-gray-50 text-lg shadow-lg"
                   >
                     <Crown className="w-6 h-6" />
-                    Generate 5 Captions Free
+                    Start Free Trial
                   </Link>
                 </motion.div>
             </motion.div>
@@ -679,11 +679,11 @@ export default function Landing() {
                 to="/register"
                 className="inline-flex items-center gap-2 bg-white text-indigo-600 px-10 py-5 rounded-xl text-lg font-bold hover:bg-gray-50 transition-all shadow-xl transform hover:scale-105"
               >
-                Generate 5 Captions Free
+                Start Free Trial
                 <ArrowRight className="w-6 h-6" />
               </Link>
               <p className="mt-6 text-indigo-100 text-sm">
-                No credit card required • 5 free captions • Cancel anytime
+                7-day free trial • Full Premium access • Cancel anytime
               </p>
             </div>
           </div>

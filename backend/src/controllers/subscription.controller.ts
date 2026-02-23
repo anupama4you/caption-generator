@@ -7,9 +7,7 @@ import { getMonthlyLimit } from '../config/subscription.config';
 export class SubscriptionController {
   /**
    * Direct subscription tier change endpoint
-   * SECURITY: This endpoint is disabled for PREMIUM upgrades.
-   * Premium upgrades must go through Stripe checkout flow.
-   * This endpoint only allows checking current tier or administrative use.
+   * SECURITY: Disabled for upgrades - must go through Stripe checkout
    */
   async upgradeSubscription(req: AuthRequest, res: Response): Promise<Response> {
     try {
@@ -18,42 +16,10 @@ export class SubscriptionController {
         return res.status(401).json({ error: 'Unauthorized' });
       }
 
-      const { tier } = req.body;
-
-      // Validate tier
-      if (tier !== 'PREMIUM' && tier !== 'FREE') {
-        return res.status(400).json({ error: 'Invalid subscription tier' });
-      }
-
-      // SECURITY: Block direct PREMIUM upgrades - must go through Stripe
-      if (tier === 'PREMIUM') {
-        return res.status(403).json({
-          error: 'Premium upgrades must go through payment flow',
-          message: 'Please use the checkout endpoint to upgrade to Premium',
-          redirectTo: '/api/payment/create-checkout-session',
-        });
-      }
-
-      // Get current user
-      const user = await prisma.user.findUnique({
-        where: { id: userId },
-      });
-
-      if (!user) {
-        return res.status(404).json({ error: 'User not found' });
-      }
-
-      // Check if already on this tier
-      if (user.subscriptionTier === tier) {
-        return res.status(400).json({ error: `Already subscribed to ${tier} plan` });
-      }
-
-      // Only FREE tier changes are allowed through this endpoint
-      // This is essentially a downgrade, so redirect to cancel endpoint
-      return res.status(400).json({
-        error: 'Use the cancel endpoint to downgrade',
-        message: 'To downgrade to FREE, please use POST /api/subscription/cancel',
-        redirectTo: '/api/subscription/cancel',
+      return res.status(403).json({
+        error: 'Upgrades must go through payment flow',
+        message: 'Please use the checkout endpoint to start a trial or subscribe',
+        redirectTo: '/api/payment/create-checkout-session',
       });
     } catch (error) {
       console.error('Upgrade subscription error:', error);
@@ -62,7 +28,7 @@ export class SubscriptionController {
   }
 
   /**
-   * Get current subscription details
+   * Get current subscription details including trial info
    */
   async getSubscription(req: AuthRequest, res: Response): Promise<Response> {
     try {
@@ -77,6 +43,8 @@ export class SubscriptionController {
           subscriptionTier: true,
           subscriptionStart: true,
           subscriptionEnd: true,
+          trialEndsAt: true,
+          trialActivated: true,
         },
       });
 
@@ -104,6 +72,9 @@ export class SubscriptionController {
           tier: user.subscriptionTier,
           subscriptionStart: user.subscriptionStart,
           subscriptionEnd: user.subscriptionEnd,
+          trialEndsAt: user.trialEndsAt,
+          trialActivated: user.trialActivated,
+          isOnTrial: user.subscriptionTier === 'TRIAL',
           usage: usage
             ? {
                 current: usage.captionsGenerated,
@@ -120,7 +91,9 @@ export class SubscriptionController {
   }
 
   /**
-   * Cancel/downgrade subscription
+   * Cancel subscription or trial
+   * - TRIAL: immediate cancel, no charge, downgrade to FREE
+   * - PREMIUM: cancel at period end, keep access until billing period ends
    */
   async cancelSubscription(req: AuthRequest, res: Response): Promise<Response> {
     try {
@@ -138,52 +111,75 @@ export class SubscriptionController {
       }
 
       if (user.subscriptionTier === 'FREE') {
-        return res.status(400).json({ error: 'Already on free plan' });
+        return res.status(400).json({ error: 'No active subscription to cancel' });
       }
 
-      // If user has a Stripe subscription, cancel it
+      const isOnTrial = user.subscriptionTier === 'TRIAL';
+
       if (user.stripeSubscriptionId) {
         try {
-          await stripeService.cancelSubscription(user.stripeSubscriptionId);
+          if (isOnTrial) {
+            // Trial: immediate cancel, no charge
+            await stripeService.cancelSubscription(user.stripeSubscriptionId);
+          } else {
+            // Paid: cancel at end of billing period (keep access)
+            await stripeService.cancelSubscriptionAtPeriodEnd(user.stripeSubscriptionId);
+          }
         } catch (stripeError) {
           console.error('Error canceling Stripe subscription:', stripeError);
-          // Continue with local cancellation even if Stripe fails
         }
       }
 
-      // Downgrade to FREE
-      const updatedUser = await prisma.user.update({
-        where: { id: userId },
-        data: {
-          subscriptionTier: 'FREE',
-          subscriptionStart: null,
-          subscriptionEnd: null,
-          stripeSubscriptionId: null,
-        },
-      });
+      if (isOnTrial) {
+        // Immediate downgrade for trial cancellation
+        await prisma.user.update({
+          where: { id: userId },
+          data: {
+            subscriptionTier: 'FREE',
+            subscriptionStart: null,
+            subscriptionEnd: null,
+            stripeSubscriptionId: null,
+            trialEndsAt: null,
+          },
+        });
 
-      // Update usage limit for current month
-      const currentMonth = new Date().getMonth() + 1;
-      const currentYear = new Date().getFullYear();
+        // Update usage limit immediately
+        const currentMonth = new Date().getMonth() + 1;
+        const currentYear = new Date().getFullYear();
+        const freeLimit = getMonthlyLimit('FREE');
 
-      await prisma.usageTracking.update({
-        where: {
-          userId_month_year: {
+        await prisma.usageTracking.upsert({
+          where: {
+            userId_month_year: {
+              userId,
+              month: currentMonth,
+              year: currentYear,
+            },
+          },
+          update: { monthlyLimit: freeLimit },
+          create: {
             userId,
             month: currentMonth,
             year: currentYear,
+            captionsGenerated: 0,
+            monthlyLimit: freeLimit,
           },
-        },
-        data: {
-          monthlyLimit: getMonthlyLimit('FREE'),
-        },
-      });
+        });
 
+        return res.status(200).json({
+          success: true,
+          message: 'Trial cancelled. You have been moved to the free plan.',
+          data: { subscriptionTier: 'FREE' },
+        });
+      }
+
+      // For PREMIUM: don't downgrade locally - the webhook handles it when period ends
       return res.status(200).json({
         success: true,
-        message: 'Subscription cancelled successfully',
+        message: `Subscription will be cancelled at the end of your billing period (${user.subscriptionEnd?.toLocaleDateString()}).`,
         data: {
-          subscriptionTier: updatedUser.subscriptionTier,
+          subscriptionTier: user.subscriptionTier,
+          accessUntil: user.subscriptionEnd,
         },
       });
     } catch (error) {

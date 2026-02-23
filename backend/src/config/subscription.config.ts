@@ -3,6 +3,8 @@
  * All subscription-related constants should be defined here
  */
 
+export const TRIAL_DURATION_DAYS = 7;
+
 export const SUBSCRIPTION_CONFIG = {
   FREE: {
     monthlyLimit: 5,
@@ -14,6 +16,18 @@ export const SUBSCRIPTION_CONFIG = {
       'Basic analytics',
       'All content types supported',
       'Profile customization',
+    ],
+  },
+  TRIAL: {
+    monthlyLimit: 100,
+    maxPlatforms: -1, // Same as PREMIUM
+    features: [
+      '7-day free trial with full Premium features',
+      '100 caption generations per month',
+      'Unlimited platforms per generation',
+      '3 caption variants per platform',
+      'Advanced analytics',
+      'Priority support',
     ],
   },
   PREMIUM: {
