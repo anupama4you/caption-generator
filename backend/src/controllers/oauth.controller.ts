@@ -82,24 +82,39 @@ export class OAuthController {
 
   async googleAuth(req: Request, res: Response): Promise<Response> {
     try {
-      const { credential } = req.body;
+      const { credential, access_token } = req.body;
 
-      if (!credential) {
+      let email: string;
+      let name: string | undefined;
+
+      if (credential) {
+        // ID token flow (from <GoogleLogin> component)
+        const ticket = await googleClient.verifyIdToken({
+          idToken: credential,
+          audience: process.env.GOOGLE_CLIENT_ID,
+        });
+
+        const payload = ticket.getPayload();
+        if (!payload || !payload.email) {
+          return res.status(400).json({ error: 'Invalid Google token' });
+        }
+        email = payload.email;
+        name = payload.name;
+      } else if (access_token) {
+        // Access token flow (from useGoogleLogin hook with custom button)
+        const userInfoResponse = await axios.get(
+          'https://www.googleapis.com/oauth2/v3/userinfo',
+          { headers: { Authorization: `Bearer ${access_token}` } }
+        );
+        const userInfo = userInfoResponse.data;
+        if (!userInfo.email) {
+          return res.status(400).json({ error: 'Could not get email from Google' });
+        }
+        email = userInfo.email;
+        name = userInfo.name;
+      } else {
         return res.status(400).json({ error: 'No credential provided' });
       }
-
-      // Verify Google token
-      const ticket = await googleClient.verifyIdToken({
-        idToken: credential,
-        audience: process.env.GOOGLE_CLIENT_ID,
-      });
-
-      const payload = ticket.getPayload();
-      if (!payload || !payload.email) {
-        return res.status(400).json({ error: 'Invalid Google token' });
-      }
-
-      const { email, name } = payload;
 
       // Create or get user
       const user = await this.createOrGetUser(email, name);
