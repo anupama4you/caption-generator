@@ -193,7 +193,6 @@ export default function Profile() {
   return (
     <AppLayout>
       <main className="container mx-auto px-4 sm:px-6 py-4 max-w-7xl">
-        <div className="max-w-4xl mx-auto">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -562,7 +561,6 @@ export default function Profile() {
               )}
             </motion.button>
           </form>
-        </div>
       </main>
 
       {/* Unsaved Changes Warning Modal */}

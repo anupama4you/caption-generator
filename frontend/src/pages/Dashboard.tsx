@@ -503,7 +503,7 @@ const togglePlatform = (platform: Platform) => {
               ) : generatedCaptions.length === 0 ? (
 
                 /* ─── FORM ─── */
-                <div className="p-4 lg:p-6 max-w-4xl mx-auto">
+                <div className="container mx-auto px-4 sm:px-6 py-4 max-w-7xl">
                   <AnimatePresence>
                     {error && (
                       <motion.div
@@ -634,7 +634,7 @@ const togglePlatform = (platform: Platform) => {
               ) : (
 
                 /* ─── RESULTS ─── */
-                <div className="p-4 lg:p-6 max-w-6xl mx-auto">
+                <div className="container mx-auto px-4 sm:px-6 py-4 max-w-7xl">
                   <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-6">
                     <div>
                       <h3 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
