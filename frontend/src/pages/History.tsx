@@ -11,8 +11,7 @@ import {
 import { CopyToClipboard } from 'react-copy-to-clipboard';
 import api from '../services/api';
 import { CaptionAttempt, ContentType, Platform } from '../types';
-import Navbar from '../components/Navbar';
-import Footer from '../components/Footer';
+import AppLayout from '../components/AppLayout';
 import facebookLogo from '../assets/images/facebook.png';
 import instagramLogo from '../assets/images/instagram.png';
 import tiktokLogo from '../assets/images/tiktok.png';
@@ -254,25 +253,15 @@ export default function History() {
     }, {} as Record<string, typeof selectedAttempt.captions>);
 
     return (
-      <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-purple-50">
-        <nav className="bg-white/80 backdrop-blur-lg shadow-sm border-b border-gray-200 sticky top-0 z-50">
-          <div className="container mx-auto px-4 sm:px-6 py-4">
-            <div className="flex justify-between items-center">
-              <button
-                onClick={() => setSelectedAttempt(null)}
-                className="flex items-center gap-2 text-gray-700 hover:text-indigo-600"
-              >
-                <ArrowLeft className="w-5 h-5" />
-                <span className="font-medium">Back to History</span>
-              </button>
-              <Link to="/" className="text-gray-700 hover:text-indigo-600">
-                Home
-              </Link>
-            </div>
-          </div>
-        </nav>
-
+      <AppLayout>
         <main className="container mx-auto px-4 sm:px-6 py-4 max-w-7xl">
+          <button
+            onClick={() => setSelectedAttempt(null)}
+            className="flex items-center gap-2 text-gray-700 hover:text-indigo-600 mb-4"
+          >
+            <ArrowLeft className="w-5 h-5" />
+            <span className="font-medium">Back to History</span>
+          </button>
           {/* Attempt Header */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
@@ -930,15 +919,13 @@ export default function History() {
             })}
           </div>
         </main>
-      </div>
+      </AppLayout>
     );
   }
 
   // List view
   return (
-    <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-purple-50">
-      <Navbar />
-
+    <AppLayout>
       <main className="container mx-auto px-4 sm:px-6 py-4 max-w-7xl">
         {/* Page Header */}
         <div className="flex items-center gap-2 mb-4">
@@ -1104,7 +1091,6 @@ export default function History() {
           </div>
         )}
       </main>
-      <Footer />
-    </div>
+    </AppLayout>
   );
 }

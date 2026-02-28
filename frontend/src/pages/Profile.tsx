@@ -5,8 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Sparkles, Save, Settings, User as UserIcon, Zap, Hash, Crown, Loader2, X, AlertTriangle } from 'lucide-react';
 import { RootState } from '../store/store';
 import api from '../services/api';
-import Navbar from '../components/Navbar';
-import Footer from '../components/Footer';
+import AppLayout from '../components/AppLayout';
 
 export default function Profile() {
   const { user } = useSelector((state: RootState) => state.auth);
@@ -192,9 +191,7 @@ export default function Profile() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-purple-50">
-      <Navbar />
-
+    <AppLayout>
       <main className="container mx-auto px-4 sm:px-6 py-4 max-w-7xl">
         <div className="max-w-4xl mx-auto">
           <motion.div
@@ -633,7 +630,6 @@ export default function Profile() {
         )}
       </AnimatePresence>
 
-      <Footer />
-    </div>
+    </AppLayout>
   );
 }

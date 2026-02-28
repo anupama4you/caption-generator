@@ -8,8 +8,7 @@ import {
 import { RootState } from '../store/store';
 import { setUser } from '../store/authSlice';
 import api from '../services/api';
-import Navbar from '../components/Navbar';
-import Footer from '../components/Footer';
+import AppLayout from '../components/AppLayout';
 
 interface PlanPricing {
   amount: number;
@@ -196,9 +195,7 @@ export default function Pricing() {
   const displayInterval = billingInterval === 'yearly' ? 'year' : 'month';
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-purple-50">
-      <Navbar />
-
+    <AppLayout>
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
         {/* Page Title */}
         <div className="text-center mb-6">
@@ -613,7 +610,6 @@ export default function Pricing() {
         </motion.div>
       )}
 
-      <Footer />
-    </div>
+    </AppLayout>
   );
 }
