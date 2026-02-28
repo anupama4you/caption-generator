@@ -6,7 +6,6 @@ import { useGoogleLogin } from '@react-oauth/google';
 import { Link } from 'react-router-dom';
 import { setUser } from '../store/authSlice';
 import api from '../services/api';
-import mainLogo from '../assets/images/main-logo.svg';
 
 interface RegisterModalProps {
   isOpen: boolean;
@@ -91,7 +90,7 @@ export default function RegisterModal({ isOpen, onClose, onSwitchToLogin, onRegi
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             onClick={onClose}
-            className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[60]"
+            className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[60]"
           />
 
           {/* Modal */}
@@ -101,7 +100,7 @@ export default function RegisterModal({ isOpen, onClose, onSwitchToLogin, onRegi
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.96, y: 16 }}
               transition={{ duration: 0.2, ease: 'easeOut' }}
-              className="bg-white rounded-2xl shadow-2xl w-full max-w-sm relative"
+              className="bg-white rounded-2xl shadow-2xl w-full max-w-md relative"
               onClick={(e) => e.stopPropagation()}
             >
               {/* Close */}
@@ -113,11 +112,10 @@ export default function RegisterModal({ isOpen, onClose, onSwitchToLogin, onRegi
               </button>
 
               <div className="px-8 pt-8 pb-7">
-                {/* Logo + Heading */}
-                <div className="text-center mb-6">
-                  <img src={mainLogo} alt="Captions4You" className="h-10 w-auto mx-auto mb-4" />
-                  <h2 className="text-xl font-bold text-gray-900">Create your account</h2>
-                  <p className="text-sm text-gray-500 mt-1">Free forever · No credit card required</p>
+                {/* Heading */}
+                <div className="mb-6">
+                  <h2 className="text-2xl font-bold text-gray-900">Create your account</h2>
+                  <p className="text-sm text-indigo-600 mt-1">Start generating captions for free. No credit card required.</p>
                 </div>
 
                 {/* Error */}
@@ -127,80 +125,51 @@ export default function RegisterModal({ isOpen, onClose, onSwitchToLogin, onRegi
                   </div>
                 )}
 
-                {/* Google Button */}
-                <button
-                  type="button"
-                  onClick={() => { setError(''); setGoogleLoading(true); signUpWithGoogle(); }}
-                  disabled={googleLoading || loading}
-                  className="w-full flex items-center justify-center gap-3 px-4 py-2.5 border border-gray-300 rounded-lg bg-white text-gray-700 font-medium text-sm hover:bg-gray-50 hover:border-gray-400 transition-all disabled:opacity-60 disabled:cursor-not-allowed shadow-sm"
-                >
-                  {googleLoading ? (
-                    <Loader2 className="w-5 h-5 animate-spin text-gray-500" />
-                  ) : (
-                    <GoogleIcon />
-                  )}
-                  Continue with Google
-                </button>
-
-                {/* Divider */}
-                <div className="flex items-center gap-3 my-5">
-                  <div className="flex-1 h-px bg-gray-200" />
-                  <span className="text-xs text-gray-400 font-medium">or</span>
-                  <div className="flex-1 h-px bg-gray-200" />
-                </div>
-
-                {/* Form */}
-                <form onSubmit={handleSubmit} className="space-y-4">
+                {/* Email/Password Form */}
+                <form onSubmit={handleSubmit} className="space-y-3">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1.5">Full name</label>
                     <input
                       type="text"
                       value={name}
                       onChange={(e) => setName(e.target.value)}
-                      placeholder="Jane Smith"
+                      placeholder="Enter your full name"
                       required
-                      className="w-full px-3.5 py-2.5 border border-gray-300 rounded-lg text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition"
+                      className="w-full px-4 py-3 border border-gray-300 rounded-lg text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition"
                     />
                   </div>
-
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1.5">Email address</label>
                     <input
                       type="email"
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
-                      placeholder="you@example.com"
+                      placeholder="Enter your email address"
                       required
-                      className="w-full px-3.5 py-2.5 border border-gray-300 rounded-lg text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition"
+                      className="w-full px-4 py-3 border border-gray-300 rounded-lg text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition"
                     />
                   </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1.5">Password</label>
-                    <div className="relative">
-                      <input
-                        type={showPassword ? 'text' : 'password'}
-                        value={password}
-                        onChange={(e) => setPassword(e.target.value)}
-                        placeholder="Min. 6 characters"
-                        required
-                        minLength={6}
-                        className="w-full px-3.5 py-2.5 pr-10 border border-gray-300 rounded-lg text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition"
-                      />
-                      <button
-                        type="button"
-                        onClick={() => setShowPassword(!showPassword)}
-                        className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
-                      >
-                        {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                      </button>
-                    </div>
+                  <div className="relative">
+                    <input
+                      type={showPassword ? 'text' : 'password'}
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      placeholder="Create a password (min. 6 characters)"
+                      required
+                      minLength={6}
+                      className="w-full px-4 py-3 pr-10 border border-gray-300 rounded-lg text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                    >
+                      {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    </button>
                   </div>
 
                   <button
                     type="submit"
                     disabled={loading || googleLoading}
-                    className="w-full py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg font-semibold text-sm transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                    className="w-full py-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg font-semibold text-sm transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                   >
                     {loading ? (
                       <>
@@ -208,10 +177,32 @@ export default function RegisterModal({ isOpen, onClose, onSwitchToLogin, onRegi
                         Creating account...
                       </>
                     ) : (
-                      'Create account'
+                      'Sign Up'
                     )}
                   </button>
                 </form>
+
+                {/* Divider */}
+                <div className="flex items-center gap-3 my-4">
+                  <div className="flex-1 h-px bg-gray-200" />
+                  <span className="text-xs text-gray-400 font-medium">or</span>
+                  <div className="flex-1 h-px bg-gray-200" />
+                </div>
+
+                {/* Google Button — blue, full width */}
+                <button
+                  type="button"
+                  onClick={() => { setError(''); setGoogleLoading(true); signUpWithGoogle(); }}
+                  disabled={googleLoading || loading}
+                  className="w-full flex items-center justify-center gap-3 px-4 py-2.5 border border-gray-300 rounded-lg bg-white text-gray-700 font-medium text-sm hover:bg-gray-50 hover:border-gray-400 transition-all disabled:opacity-60 disabled:cursor-not-allowed shadow-sm"
+                >
+                  {googleLoading ? (
+                    <Loader2 className="w-5 h-5 animate-spin" />
+                  ) : (
+                    <GoogleIcon />
+                  )}
+                  Sign Up with Google
+                </button>
 
                 {/* Switch */}
                 <p className="text-center text-sm text-gray-500 mt-5">
@@ -221,7 +212,7 @@ export default function RegisterModal({ isOpen, onClose, onSwitchToLogin, onRegi
                     onClick={onSwitchToLogin}
                     className="text-indigo-600 font-semibold hover:text-indigo-700"
                   >
-                    Sign in
+                    Login here
                   </button>
                 </p>
 

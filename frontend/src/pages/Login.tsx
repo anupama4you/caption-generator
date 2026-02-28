@@ -5,7 +5,6 @@ import { useGoogleLogin } from '@react-oauth/google';
 import { Loader2, Eye, EyeOff } from 'lucide-react';
 import api from '../services/api';
 import { setUser } from '../store/authSlice';
-import mainLogo from '../assets/images/main-logo.svg';
 
 const GoogleIcon = () => (
   <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true">
@@ -71,22 +70,75 @@ export default function Login() {
 
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-center p-4">
-      <div className="bg-white rounded-2xl shadow-lg border border-gray-100 w-full max-w-sm p-8">
-        {/* Logo + Heading */}
-        <div className="text-center mb-7">
-          <Link to="/">
-            <img src={mainLogo} alt="Captions4You" className="h-10 w-auto mx-auto mb-4" />
-          </Link>
-          <h1 className="text-xl font-bold text-gray-900">Welcome back</h1>
-          <p className="text-sm text-gray-500 mt-1">Sign in to your account</p>
+      <div className="bg-white rounded-2xl shadow-lg border border-gray-100 w-full max-w-md p-8">
+        {/* Heading */}
+        <div className="mb-6">
+          <Link to="/" className="text-sm text-indigo-600 hover:text-indigo-700 font-medium mb-4 inline-block">← Back to home</Link>
+          <h1 className="text-2xl font-bold text-gray-900">Welcome back</h1>
+          <p className="text-sm text-indigo-600 mt-1">Sign in to continue generating captions.</p>
         </div>
 
         {/* Error */}
         {error && (
-          <div className="mb-5 px-4 py-3 rounded-lg bg-red-50 border border-red-200 text-red-700 text-sm">
+          <div className="mb-4 px-4 py-3 rounded-lg bg-red-50 border border-red-200 text-red-700 text-sm">
             {error}
           </div>
         )}
+
+        {/* Form */}
+        <form onSubmit={handleSubmit} className="space-y-3">
+          <input
+            type="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            placeholder="Enter your email address"
+            required
+            className="w-full px-4 py-3 border border-gray-300 rounded-lg text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition"
+          />
+          <div className="relative">
+            <input
+              type={showPassword ? 'text' : 'password'}
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder="Enter your password"
+              required
+              className="w-full px-4 py-3 pr-10 border border-gray-300 rounded-lg text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition"
+            />
+            <button
+              type="button"
+              onClick={() => setShowPassword(!showPassword)}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+            >
+              {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+            </button>
+          </div>
+          <div className="flex justify-end">
+            <Link to="/forgot-password" className="text-xs text-indigo-600 hover:text-indigo-700 font-medium">
+              Forgot password?
+            </Link>
+          </div>
+          <button
+            type="submit"
+            disabled={loading || googleLoading}
+            className="w-full py-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg font-semibold text-sm transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+          >
+            {loading ? (
+              <>
+                <Loader2 className="w-4 h-4 animate-spin" />
+                Signing in...
+              </>
+            ) : (
+              'Sign In'
+            )}
+          </button>
+        </form>
+
+        {/* Divider */}
+        <div className="flex items-center gap-3 my-4">
+          <div className="flex-1 h-px bg-gray-200" />
+          <span className="text-xs text-gray-400 font-medium">or</span>
+          <div className="flex-1 h-px bg-gray-200" />
+        </div>
 
         {/* Google Button */}
         <button
@@ -96,78 +148,15 @@ export default function Login() {
           className="w-full flex items-center justify-center gap-3 px-4 py-2.5 border border-gray-300 rounded-lg bg-white text-gray-700 font-medium text-sm hover:bg-gray-50 hover:border-gray-400 transition-all disabled:opacity-60 disabled:cursor-not-allowed shadow-sm"
         >
           {googleLoading ? (
-            <Loader2 className="w-5 h-5 animate-spin text-gray-500" />
+            <Loader2 className="w-5 h-5 animate-spin" />
           ) : (
             <GoogleIcon />
           )}
-          Continue with Google
+          Sign In with Google
         </button>
 
-        {/* Divider */}
-        <div className="flex items-center gap-3 my-5">
-          <div className="flex-1 h-px bg-gray-200" />
-          <span className="text-xs text-gray-400 font-medium">or</span>
-          <div className="flex-1 h-px bg-gray-200" />
-        </div>
-
-        {/* Form */}
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1.5">Email address</label>
-            <input
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="you@example.com"
-              required
-              className="w-full px-3.5 py-2.5 border border-gray-300 rounded-lg text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition"
-            />
-          </div>
-
-          <div>
-            <div className="flex items-center justify-between mb-1.5">
-              <label className="block text-sm font-medium text-gray-700">Password</label>
-              <Link to="/forgot-password" className="text-xs text-indigo-600 hover:text-indigo-700 font-medium">
-                Forgot password?
-              </Link>
-            </div>
-            <div className="relative">
-              <input
-                type={showPassword ? 'text' : 'password'}
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="••••••••"
-                required
-                className="w-full px-3.5 py-2.5 pr-10 border border-gray-300 rounded-lg text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition"
-              />
-              <button
-                type="button"
-                onClick={() => setShowPassword(!showPassword)}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
-              >
-                {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-              </button>
-            </div>
-          </div>
-
-          <button
-            type="submit"
-            disabled={loading || googleLoading}
-            className="w-full py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg font-semibold text-sm transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-          >
-            {loading ? (
-              <>
-                <Loader2 className="w-4 h-4 animate-spin" />
-                Signing in...
-              </>
-            ) : (
-              'Sign in'
-            )}
-          </button>
-        </form>
-
         {/* Switch */}
-        <p className="text-center text-sm text-gray-500 mt-6">
+        <p className="text-center text-sm text-gray-500 mt-5">
           Don't have an account?{' '}
           <Link to="/register" className="text-indigo-600 font-semibold hover:text-indigo-700">
             Sign up free

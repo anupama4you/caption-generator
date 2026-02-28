@@ -1,13 +1,14 @@
 import { useState, useEffect, FormEvent, useRef } from 'react';
-import { Link } from 'react-router-dom';
-import { useSelector } from 'react-redux';
+import { Link, useNavigate } from 'react-router-dom';
+import { useSelector, useDispatch } from 'react-redux';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Sparkles, Copy, Check, TrendingUp, Clock,
   Hash, MessageSquare, BarChart3, Zap, Instagram,
   Facebook, Youtube, Video, Image, FileText, Camera,
   Loader2, Linkedin, Twitter, Ghost, Clapperboard, Layers, ChevronDown, ChevronUp,
-  ChevronLeft, ChevronRight, Crown, Share2, Star, RefreshCw
+  ChevronLeft, ChevronRight, Crown, Share2, Star, RefreshCw,
+  History as HistoryIcon, User, LogOut, Settings, Menu, X as XIcon
 } from 'lucide-react';
 import facebookLogo from '../assets/images/facebook.png';
 import instagramLogo from '../assets/images/instagram.png';
@@ -16,8 +17,10 @@ import youtubeLogo from '../assets/images/youtube.png';
 import snapchatLogo from '../assets/images/snapchat.png';
 import linkedinLogo from '../assets/images/linkedin.png';
 import twitterLogo from '../assets/images/twitter.png';
+import mainLogo from '../assets/images/main-logo.svg';
 import { RootState } from '../store/store';
 import api from '../services/api';
+import { logout } from '../store/authSlice';
 import { Caption, Platform, ContentType, UsageStats } from '../types';
 import { CopyToClipboard } from 'react-copy-to-clipboard';
 import Navbar from '../components/Navbar';
@@ -80,22 +83,6 @@ const platformArt = (platform: Platform) => {
 // Maximum platforms allowed for free users
 const MAX_FREE_PLATFORMS = 2;
 
-interface PlanPricing {
-  amount: number;
-  currency: string;
-  interval: string;
-  name: string;
-}
-
-interface PricingData {
-  monthly: PlanPricing;
-  yearly: PlanPricing;
-}
-
-const DEFAULT_PRICING: PricingData = {
-  monthly: { amount: 4.99, currency: 'AUD', interval: 'month', name: 'Premium Monthly' },
-  yearly: { amount: 49.99, currency: 'AUD', interval: 'year', name: 'Premium Yearly' },
-};
 
 // Caption Generation Loader Component
 function CaptionLoader() {
@@ -328,8 +315,7 @@ export default function Dashboard() {
     'tiktok',
   ]);
   const [contentType, setContentType] = useState<ContentType>('short_video');
-  const [pricing, setPricing] = useState<PricingData>(DEFAULT_PRICING);
-  const [description, setDescription] = useState('');
+const [description, setDescription] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [generatedCaptions, setGeneratedCaptions] = useState<Caption[]>([]);
@@ -340,13 +326,13 @@ export default function Dashboard() {
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [showRegisterModal, setShowRegisterModal] = useState(false);
   const [isGuestGeneration, setIsGuestGeneration] = useState(false);
-  const [isLimitError, setIsLimitError] = useState(false);
   const [captionCounter, setCaptionCounter] = useState(54_283);
   const counterRef = useRef(54_283);
-  const formatCurrency = (plan: PlanPricing) => (plan.currency === 'AUD' ? '$' : `${plan.currency} `);
-  const formatAmount = (amount: number) => (Number.isInteger(amount) ? amount.toFixed(0) : amount.toFixed(2));
-
-  // Get available platforms based on content type
+  const navigate = useNavigate();
+  const dispatch = useDispatch();
+  const [showLogoutModal, setShowLogoutModal] = useState(false);
+  const [showMobileSidebar, setShowMobileSidebar] = useState(false);
+// Get available platforms based on content type
   const getAvailablePlatforms = () => {
     return PLATFORMS.filter(p => p.supportedContentTypes.includes(contentType));
   };
@@ -379,12 +365,7 @@ export default function Dashboard() {
     return () => clearInterval(interval);
   }, []);
 
-  // Fetch pricing on mount
-  useEffect(() => {
-    fetchPricing();
-  }, [user]); // Fetch usage when user logs in or out
-
-  // Limit selected platforms when user becomes free tier (upgrades from guest or downgrades from premium)
+// Limit selected platforms when user becomes free tier (upgrades from guest or downgrades from premium)
   useEffect(() => {
     if (hasLimitedPlatforms && selectedPlatforms.length > MAX_FREE_PLATFORMS) {
       // User became free tier - limit to MAX_FREE_PLATFORMS
@@ -440,24 +421,7 @@ export default function Dashboard() {
     }
   };
 
-  const fetchPricing = async () => {
-    try {
-      const response = await api.get('/payment/pricing');
-      if (response?.data?.success && response?.data?.pricing) {
-        const { monthly, yearly } = response.data.pricing;
-        setPricing({
-          monthly: monthly || DEFAULT_PRICING.monthly,
-          yearly: yearly || DEFAULT_PRICING.yearly,
-        });
-      }
-    } catch (err) {
-      console.error('Failed to fetch pricing:', err);
-      // Set default pricing as fallback
-      setPricing(DEFAULT_PRICING);
-    }
-  };
-
-  const togglePlatform = (platform: Platform) => {
+const togglePlatform = (platform: Platform) => {
     // Only FREE tier users are limited to 2 platforms
     const isLimited = user?.subscriptionTier === 'FREE';
 
@@ -500,7 +464,6 @@ export default function Dashboard() {
       }
     } catch (err: any) {
       if (err.response?.status === 403) {
-        setIsLimitError(true);
         const errorData = err.response.data;
         setError(errorData.message || 'Monthly limit reached. Upgrade to Premium for more captions.');
         if (user) await fetchUsage();
@@ -549,6 +512,636 @@ export default function Dashboard() {
     ? (usage.captionsGenerated / usage.monthlyLimit) * 100
     : 0;
 
+  // ============ LOGGED-IN: SIDEBAR LAYOUT ============
+  if (user) {
+    return (
+      <>
+        <div className="flex h-screen overflow-hidden bg-gray-50">
+
+          {/* ─── Sidebar ─── */}
+          <aside
+            className={`w-56 bg-white border-r border-gray-200 flex flex-col flex-shrink-0 fixed inset-y-0 left-0 z-50 transition-transform duration-300 lg:relative lg:translate-x-0 ${
+              showMobileSidebar ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'
+            }`}
+          >
+            {/* Logo */}
+            <div className="px-4 py-4 border-b border-gray-100 flex items-center justify-between">
+              <button
+                onClick={() => { setGeneratedCaptions([]); setDescription(''); setError(''); setShowMobileSidebar(false); }}
+              >
+                <img src={mainLogo} alt="Captions4You" className="h-10 w-auto object-contain" />
+              </button>
+              <button onClick={() => setShowMobileSidebar(false)} className="lg:hidden p-1 text-gray-400 hover:text-gray-600">
+                <XIcon className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Primary CTA */}
+            <div className="p-3 border-b border-gray-100">
+              <button
+                onClick={() => { setGeneratedCaptions([]); setDescription(''); setError(''); setShowMobileSidebar(false); }}
+                className="w-full flex items-center justify-center gap-2 px-3 py-2.5 rounded-lg border-2 border-indigo-600 text-indigo-600 font-semibold text-sm hover:bg-indigo-50 transition-colors"
+              >
+                <Sparkles className="w-4 h-4" />
+                + Generate Caption
+              </button>
+            </div>
+
+            {/* Navigation */}
+            <nav className="px-2 py-3 flex-1 overflow-y-auto space-y-5">
+              <div>
+                <p className="text-xs font-semibold text-gray-400 uppercase px-2 mb-1 tracking-wider">Captions</p>
+                <button
+                  onClick={() => { setGeneratedCaptions([]); setDescription(''); setError(''); setShowMobileSidebar(false); }}
+                  className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm font-medium transition-colors text-left ${
+                    generatedCaptions.length === 0 ? 'text-indigo-700 bg-indigo-50' : 'text-gray-600 hover:bg-gray-50'
+                  }`}
+                >
+                  <Sparkles className="w-4 h-4 flex-shrink-0" />
+                  Generate
+                </button>
+                <Link
+                  to="/history"
+                  onClick={() => setShowMobileSidebar(false)}
+                  className="flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm font-medium text-gray-600 hover:bg-gray-50 transition-colors"
+                >
+                  <HistoryIcon className="w-4 h-4 flex-shrink-0" />
+                  History
+                </Link>
+              </div>
+              <div>
+                <p className="text-xs font-semibold text-gray-400 uppercase px-2 mb-1 tracking-wider">Account</p>
+                <Link
+                  to="/profile"
+                  onClick={() => setShowMobileSidebar(false)}
+                  className="flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm font-medium text-gray-600 hover:bg-gray-50 transition-colors"
+                >
+                  <User className="w-4 h-4 flex-shrink-0" />
+                  Account
+                </Link>
+                <Link
+                  to="/pricing"
+                  onClick={() => setShowMobileSidebar(false)}
+                  className="flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm font-medium text-gray-600 hover:bg-gray-50 transition-colors"
+                >
+                  <Settings className="w-4 h-4 flex-shrink-0" />
+                  Pricing
+                </Link>
+              </div>
+            </nav>
+
+            {/* Bottom: Upgrade */}
+            {(isFreeUser || isTrialUser) && (
+              <div className="p-3 border-t border-gray-100">
+                <Link
+                  to="/pricing"
+                  className="w-full flex items-center justify-center gap-2 px-3 py-2.5 rounded-lg bg-gradient-to-r from-indigo-600 to-purple-600 text-white font-semibold text-sm hover:shadow-lg transition-all"
+                >
+                  <Crown className="w-4 h-4" />
+                  {!user.trialActivated ? 'Start Free Trial' : 'Upgrade Now'}
+                </Link>
+              </div>
+            )}
+          </aside>
+
+          {/* Mobile sidebar backdrop */}
+          {showMobileSidebar && (
+            <div
+              className="fixed inset-0 bg-black/40 z-40 lg:hidden"
+              onClick={() => setShowMobileSidebar(false)}
+            />
+          )}
+
+          {/* ─── Main content area ─── */}
+          <div className="flex-1 flex flex-col overflow-hidden">
+
+            {/* Trial / upgrade top banner */}
+            {isTrialUser && (
+              <div className="bg-indigo-600 text-white text-center py-2 px-4 text-sm flex-shrink-0">
+                You are running your <strong>{trialDaysLeft} day{trialDaysLeft !== 1 ? 's' : ''} Free Trial</strong>.{' '}
+                <Link to="/pricing" className="underline font-semibold hover:text-indigo-200">Upgrade Here.</Link>
+              </div>
+            )}
+            {isFreeUser && (
+              <div className="bg-gradient-to-r from-indigo-600 to-purple-600 text-white text-center py-2 px-4 text-sm flex-shrink-0">
+                {user.trialActivated
+                  ? <><span>Upgrade to Premium for unlimited captions.{' '}</span><Link to="/pricing" className="underline font-semibold hover:text-indigo-200">Upgrade Now.</Link></>
+                  : <><span>Start your <strong>7-Day Free Trial</strong> — full Premium access, no charge until trial ends.{' '}</span><Link to="/pricing" className="underline font-semibold hover:text-indigo-200">Try Free.</Link></>
+                }
+              </div>
+            )}
+
+            {/* Top header */}
+            <header className="bg-white border-b border-gray-200 px-4 lg:px-6 py-3 flex items-center justify-between gap-3 flex-shrink-0">
+              <button
+                onClick={() => setShowMobileSidebar(true)}
+                className="lg:hidden p-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+              >
+                <Menu className="w-5 h-5" />
+              </button>
+
+              <div className="flex items-center gap-3 ml-auto">
+                {usage && (
+                  <div className="hidden sm:flex items-center gap-2 text-sm text-gray-500">
+                    <span className="tabular-nums">{usage.captionsGenerated}/{usage.monthlyLimit} captions</span>
+                    <div className="w-20 bg-gray-200 rounded-full h-1.5">
+                      <div
+                        className="bg-indigo-500 h-1.5 rounded-full transition-all"
+                        style={{ width: `${Math.min(progressPercentage, 100)}%` }}
+                      />
+                    </div>
+                  </div>
+                )}
+                <span className={`px-2.5 py-1 rounded-full text-xs font-semibold ${
+                  isTrialUser ? 'bg-amber-100 text-amber-700' : isFreeUser ? 'bg-gray-100 text-gray-600' : 'bg-purple-100 text-purple-700'
+                }`}>
+                  {isTrialUser ? `Trial: ${trialDaysLeft}d left` : isFreeUser ? 'Free' : 'Premium'}
+                </span>
+                <div className="flex items-center gap-2">
+                  <span className="hidden sm:block text-sm text-gray-700 font-medium">{user.email || user.name}</span>
+                  <button
+                    onClick={() => setShowLogoutModal(true)}
+                    className="p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+                    title="Logout"
+                  >
+                    <LogOut className="w-4 h-4" />
+                  </button>
+                </div>
+              </div>
+            </header>
+
+            {/* Scrollable main */}
+            <main className="flex-1 overflow-y-auto">
+              {loading ? (
+                <CaptionLoader />
+              ) : generatedCaptions.length === 0 ? (
+
+                /* ─── FORM ─── */
+                <div className="p-4 lg:p-6 max-w-4xl mx-auto">
+                  <AnimatePresence>
+                    {error && (
+                      <motion.div
+                        initial={{ opacity: 0, y: -10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -10 }}
+                        className="bg-red-50 border border-red-200 text-red-700 px-4 py-2 rounded-lg mb-4 text-sm"
+                      >
+                        {error}
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                  <motion.div
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="bg-white rounded-2xl shadow-lg p-6 border border-gray-100"
+                  >
+                    <div className="mb-5">
+                      <h2 className="text-xl font-bold text-gray-900">Generate Caption</h2>
+                      <p className="text-sm text-gray-500 mt-0.5">Create platform-optimized captions with AI</p>
+                    </div>
+                    <form onSubmit={handleGenerate} className="space-y-4">
+                      <div>
+                        <label className="block text-sm font-semibold text-gray-700 mb-2">Content Type</label>
+                        <div className="flex flex-wrap gap-2">
+                          {CONTENT_TYPES.map((type) => {
+                            const Icon = type.icon;
+                            const isSelected = contentType === type.value;
+                            return (
+                              <button
+                                key={type.value}
+                                type="button"
+                                onClick={() => setContentType(type.value)}
+                                className={`flex items-center gap-2 px-4 py-2 rounded-lg border-2 transition-all text-sm font-medium ${
+                                  isSelected ? 'border-indigo-500 bg-indigo-50 text-indigo-700' : 'border-gray-200 bg-white text-gray-700 hover:border-gray-300'
+                                }`}
+                              >
+                                <Icon className="w-4 h-4" />
+                                {type.label}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+                      <div>
+                        <label className="block text-sm font-semibold text-gray-700 mb-2">
+                          Select Platforms
+                          {isFreeUser && (
+                            <span className="ml-2 text-xs text-gray-500">({selectedPlatforms.length}/{MAX_FREE_PLATFORMS} selected)</span>
+                          )}
+                        </label>
+                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                          {getAvailablePlatforms().map((platform) => {
+                            const isSelected = selectedPlatforms.includes(platform.value);
+                            const isDisabled = hasLimitedPlatforms && !isSelected && selectedPlatforms.length >= MAX_FREE_PLATFORMS;
+                            const art = platformArt(platform.value);
+                            return (
+                              <button
+                                key={platform.value}
+                                type="button"
+                                onClick={() => togglePlatform(platform.value)}
+                                disabled={isDisabled}
+                                className={`relative p-3 rounded-lg border-2 transition-all ${
+                                  isSelected ? 'border-indigo-500 bg-indigo-50' : isDisabled ? 'border-gray-200 bg-gray-50 opacity-50 cursor-not-allowed' : 'border-gray-200 bg-white hover:border-gray-300'
+                                }`}
+                              >
+                                {isSelected && (
+                                  <div className="absolute top-1 right-1 bg-indigo-600 text-white rounded-full p-0.5">
+                                    <Check className="w-3 h-3" />
+                                  </div>
+                                )}
+                                <div className="flex flex-col items-center gap-2">
+                                  {art}
+                                  <span className={`text-xs font-semibold ${isSelected ? 'text-indigo-900' : isDisabled ? 'text-gray-400' : 'text-gray-700'}`}>
+                                    {platform.label}
+                                  </span>
+                                </div>
+                              </button>
+                            );
+                          })}
+                        </div>
+                        {hasLimitedPlatforms && selectedPlatforms.length >= MAX_FREE_PLATFORMS && (
+                          <p className="text-xs text-amber-600 mt-2 flex items-center gap-1">
+                            <Zap className="w-3 h-3" />
+                            Upgrade to Premium for unlimited platform selection
+                          </p>
+                        )}
+                      </div>
+                      <div>
+                        <label className="block text-sm font-semibold text-gray-700 mb-2">Describe Your Content</label>
+                        <textarea
+                          value={description}
+                          onChange={(e) => setDescription(e.target.value)}
+                          placeholder="Example: A morning workout routine showing 5 exercises for abs, filmed in a modern gym with motivational background music..."
+                          className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all resize-none text-sm"
+                          rows={3}
+                          required
+                        />
+                      </div>
+                      {isAtLimit ? (
+                        <div className="rounded-xl border-2 border-amber-300 bg-amber-50 p-4 text-center">
+                          <p className="text-amber-800 font-semibold mb-1">
+                            🚫 Monthly limit reached ({usage?.captionsGenerated}/{usage?.monthlyLimit} used)
+                          </p>
+                          <p className="text-amber-700 text-sm mb-3">Upgrade to Premium for 100 captions/month and unlimited platforms.</p>
+                          <Link
+                            to="/pricing"
+                            className="inline-block bg-gradient-to-r from-indigo-600 to-purple-600 text-white px-6 py-2 rounded-lg font-semibold text-sm hover:shadow-lg transition-all"
+                          >
+                            <Crown className="w-4 h-4 inline mr-1 -mt-0.5" />
+                            Upgrade to Premium
+                          </Link>
+                        </div>
+                      ) : (
+                        <button
+                          type="submit"
+                          disabled={loading || !description.trim() || selectedPlatforms.length === 0}
+                          className="w-full bg-gradient-to-r from-indigo-600 to-purple-600 text-white py-3 rounded-lg font-semibold shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed transition-all flex items-center justify-center gap-2"
+                        >
+                          <Sparkles className="w-5 h-5" />
+                          Generate Captions
+                        </button>
+                      )}
+                    </form>
+                  </motion.div>
+                </div>
+
+              ) : (
+
+                /* ─── RESULTS ─── */
+                <div className="p-4 lg:p-6 max-w-6xl mx-auto">
+                  <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-6">
+                    <div>
+                      <h3 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
+                        <BarChart3 className="w-7 h-7 text-indigo-600" />
+                        Generated Captions
+                      </h3>
+                      <p className="text-sm text-gray-600 mt-1">{generatedCaptions.length} captions ready to use</p>
+                    </div>
+                    <div className="flex gap-2 flex-wrap">
+                      <motion.button
+                        onClick={() => doGenerate()}
+                        disabled={loading}
+                        whileHover={{ scale: 1.05 }}
+                        whileTap={{ scale: 0.95 }}
+                        className="px-4 py-2.5 border-2 border-indigo-500 text-indigo-600 rounded-xl font-semibold hover:bg-indigo-50 transition-all flex items-center gap-2 disabled:opacity-50"
+                      >
+                        <RefreshCw className="w-4 h-4" />
+                        Try Again
+                      </motion.button>
+                      <motion.button
+                        onClick={() => { setGeneratedCaptions([]); setDescription(''); }}
+                        whileHover={{ scale: 1.05 }}
+                        whileTap={{ scale: 0.95 }}
+                        className="px-4 py-2.5 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-xl font-semibold shadow-lg hover:shadow-xl transition-all flex items-center gap-2"
+                      >
+                        <Sparkles className="w-4 h-4" />
+                        New Caption
+                      </motion.button>
+                    </div>
+                  </div>
+                  <div className="space-y-6">
+                    {(() => {
+                      const captionsByPlatform = generatedCaptions.reduce((acc, caption) => {
+                        if (!acc[caption.platform]) acc[caption.platform] = [];
+                        acc[caption.platform].push(caption);
+                        return acc;
+                      }, {} as Record<string, typeof generatedCaptions>);
+                      return Object.entries(captionsByPlatform).map(([platform, captions]) => {
+                        const platformMeta = PLATFORMS.find(p => p.value === platform);
+                        return (
+                          <motion.div
+                            key={platform}
+                            initial={{ opacity: 0, y: 20 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            className="bg-white rounded-2xl shadow-lg p-6 border border-gray-100"
+                          >
+                            <div className="flex items-center gap-3 mb-4 pb-4 border-b border-gray-100">
+                              {platformMeta && platformArt(platformMeta.value)}
+                              <h4 className="text-lg font-bold text-gray-900">{platformMeta?.label ?? platform}</h4>
+                              <span className="ml-auto px-3 py-1 bg-indigo-100 text-indigo-700 rounded-full text-xs font-semibold">
+                                {captions.length} Captions
+                              </span>
+                            </div>
+                            <div className="relative">
+                              {captions.length > 1 && (
+                                <div className="md:hidden flex justify-between items-center mb-4">
+                                  <button
+                                    onClick={() => setCurrentSlide(prev => ({ ...prev, [platform]: Math.max(0, (prev[platform] || 0) - 1) }))}
+                                    disabled={(currentSlide[platform] || 0) === 0}
+                                    className={`p-2 rounded-full transition-colors ${(currentSlide[platform] || 0) === 0 ? 'bg-gray-100 text-gray-300 cursor-not-allowed' : 'bg-indigo-100 text-indigo-600 hover:bg-indigo-200'}`}
+                                  >
+                                    <ChevronLeft className="w-5 h-5" />
+                                  </button>
+                                  <span className="text-sm font-medium text-gray-600">{(currentSlide[platform] || 0) + 1} / {captions.length}</span>
+                                  <button
+                                    onClick={() => setCurrentSlide(prev => ({ ...prev, [platform]: Math.min(captions.length - 1, (prev[platform] || 0) + 1) }))}
+                                    disabled={(currentSlide[platform] || 0) === captions.length - 1}
+                                    className={`p-2 rounded-full transition-colors ${(currentSlide[platform] || 0) === captions.length - 1 ? 'bg-gray-100 text-gray-300 cursor-not-allowed' : 'bg-indigo-100 text-indigo-600 hover:bg-indigo-200'}`}
+                                  >
+                                    <ChevronRight className="w-5 h-5" />
+                                  </button>
+                                </div>
+                              )}
+                              <div className="md:hidden overflow-hidden">
+                                <motion.div
+                                  className="flex"
+                                  animate={{ x: `${-(currentSlide[platform] || 0) * 100}%` }}
+                                  transition={{ type: 'spring', stiffness: 300, damping: 30 }}
+                                >
+                                  {captions.map((caption) => (
+                                    <div key={caption.id} className="w-full flex-shrink-0 px-1">
+                                      <motion.div
+                                        initial={{ opacity: 0, y: 20 }}
+                                        animate={{ opacity: 1, y: 0 }}
+                                        className="border-2 border-gray-100 rounded-xl p-4 hover:border-indigo-200 transition-colors bg-gradient-to-br from-white to-gray-50"
+                                      >
+                                        <div className="flex justify-between items-center mb-3">
+                                          <span className="text-xs font-semibold text-gray-500">Caption {caption.variantNumber}</span>
+                                          {caption.analytics && (
+                                            <div className="flex items-center gap-1 bg-gradient-to-r from-indigo-50 to-purple-50 px-3 py-1 rounded-full">
+                                              <TrendingUp className="w-4 h-4 text-indigo-600" />
+                                              <span className="text-sm font-bold text-indigo-600">{caption.analytics.engagementScore.toFixed(0)}</span>
+                                            </div>
+                                          )}
+                                        </div>
+                                        {(caption.platform === 'youtube_shorts' || caption.platform === 'youtube_long') && caption.title ? (
+                                          <div className="mb-4">
+                                            <div className="mb-3">
+                                              <div className="flex items-center justify-between mb-1">
+                                                <span className="text-xs font-semibold text-gray-500 uppercase">Title</span>
+                                                <CopyToClipboard text={caption.title} onCopy={() => { setCopiedId(`${caption.id}-title`); setTimeout(() => setCopiedId(null), 2000); }}>
+                                                  <button className="flex items-center gap-1 text-xs text-indigo-600 hover:text-indigo-700 font-medium">
+                                                    {copiedId === `${caption.id}-title` ? <><Check className="w-3 h-3" />Copied</> : <><Copy className="w-3 h-3" />Copy</>}
+                                                  </button>
+                                                </CopyToClipboard>
+                                              </div>
+                                              <p className="text-gray-900 font-semibold text-sm">{caption.title}</p>
+                                            </div>
+                                            {caption.description && (
+                                              <div>
+                                                <div className="flex items-center justify-between mb-1">
+                                                  <span className="text-xs font-semibold text-gray-500 uppercase">Description</span>
+                                                  <CopyToClipboard text={caption.description} onCopy={() => { setCopiedId(`${caption.id}-description`); setTimeout(() => setCopiedId(null), 2000); }}>
+                                                    <button className="flex items-center gap-1 text-xs text-indigo-600 hover:text-indigo-700 font-medium">
+                                                      {copiedId === `${caption.id}-description` ? <><Check className="w-3 h-3" />Copied</> : <><Copy className="w-3 h-3" />Copy</>}
+                                                    </button>
+                                                  </CopyToClipboard>
+                                                </div>
+                                                <p className="text-gray-700 whitespace-pre-wrap leading-relaxed text-sm">{caption.description}</p>
+                                              </div>
+                                            )}
+                                          </div>
+                                        ) : (
+                                          <p className="text-gray-800 whitespace-pre-wrap mb-4 leading-relaxed text-sm">{caption.generatedCaption}</p>
+                                        )}
+                                        <div className="flex flex-wrap gap-2 mb-4">
+                                          {caption.hashtags.map((tag, idx) => (
+                                            <span key={idx} className="text-indigo-600 text-xs font-medium bg-indigo-50 px-2 py-1 rounded-lg">
+                                              {tag.startsWith('#') ? tag : `#${tag}`}
+                                            </span>
+                                          ))}
+                                        </div>
+                                        <div className="flex gap-2">
+                                          <CopyToClipboard text={getCopyText(caption)} onCopy={() => { setCopiedId(caption.id); setTimeout(() => setCopiedId(null), 2000); }}>
+                                            <motion.button
+                                              whileHover={{ scale: 1.02 }}
+                                              whileTap={{ scale: 0.98 }}
+                                              className={`flex-1 py-2 rounded-lg font-semibold transition-all flex items-center justify-center gap-2 text-sm ${copiedId === caption.id ? 'bg-green-500 text-white' : 'bg-gradient-to-r from-green-500 to-emerald-500 text-white hover:shadow-lg'}`}
+                                            >
+                                              {copiedId === caption.id ? <><Check className="w-4 h-4" />Copied!</> : <><Copy className="w-4 h-4" />Copy</>}
+                                            </motion.button>
+                                          </CopyToClipboard>
+                                          <motion.button whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} onClick={() => handleShare(caption)} className="px-3 py-2 rounded-lg border-2 border-indigo-200 text-indigo-600 hover:bg-indigo-50 transition-all" title="Share">
+                                            <Share2 className="w-4 h-4" />
+                                          </motion.button>
+                                        </div>
+                                        {caption.analytics && (
+                                          <div className="border-t border-gray-100 pt-4 mt-4">
+                                            <button onClick={() => setExpandedAnalytics(prev => ({ ...prev, [caption.id]: !prev[caption.id] }))} className="w-full flex items-center justify-between text-xs font-bold text-gray-900 hover:text-indigo-600 transition-colors mb-3">
+                                              <span className="flex items-center gap-1"><BarChart3 className="w-3 h-3 text-indigo-600" />Detailed Analytics</span>
+                                              {expandedAnalytics[caption.id] ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                                            </button>
+                                            <AnimatePresence>
+                                              {expandedAnalytics[caption.id] && (
+                                                <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} transition={{ duration: 0.3 }} className="overflow-hidden">
+                                                  <div className="grid grid-cols-3 gap-2 mb-3">
+                                                    <div className="text-center p-2 bg-gradient-to-br from-indigo-50 to-indigo-100 rounded-lg"><div className="text-lg font-bold text-indigo-600">{caption.analytics.engagementScore.toFixed(0)}</div><div className="text-[10px] text-gray-700 font-medium">Engagement</div></div>
+                                                    <div className="text-center p-2 bg-gradient-to-br from-purple-50 to-purple-100 rounded-lg"><div className="text-lg font-bold text-purple-600">{caption.analytics.viralityScore.toFixed(0)}</div><div className="text-[10px] text-gray-700 font-medium">Virality</div></div>
+                                                    <div className="text-center p-2 bg-gradient-to-br from-green-50 to-green-100 rounded-lg"><div className="text-xs font-bold text-green-600">{caption.analytics.reachEstimate}</div><div className="text-[10px] text-gray-700 font-medium">Reach</div></div>
+                                                  </div>
+                                                  <div className="space-y-2 mb-3">
+                                                    {[{ label: 'Hashtags', score: caption.analytics.hashtagScore, icon: Hash }, { label: 'Length', score: caption.analytics.lengthScore, icon: MessageSquare }, { label: 'Keywords', score: caption.analytics.keywordScore, icon: Zap }].map((item, idx) => (
+                                                      <div key={idx}>
+                                                        <div className="flex justify-between items-center text-[10px] mb-1"><span className="flex items-center gap-1 font-medium text-gray-700"><item.icon className="w-3 h-3" />{item.label}</span><span className="font-bold text-indigo-600">{item.score.toFixed(0)}%</span></div>
+                                                        <div className="w-full bg-gray-200 rounded-full h-1.5 overflow-hidden"><motion.div initial={{ width: 0 }} animate={{ width: `${item.score}%` }} transition={{ duration: 1, delay: idx * 0.1 }} className="bg-gradient-to-r from-indigo-500 to-purple-500 h-1.5 rounded-full" /></div>
+                                                      </div>
+                                                    ))}
+                                                  </div>
+                                                  <div className="bg-blue-50 p-2 rounded-lg mb-2">
+                                                    <h6 className="font-semibold text-[10px] mb-1.5 flex items-center gap-1 text-blue-900"><Clock className="w-3 h-3" />Best Times</h6>
+                                                    <div className="flex flex-wrap gap-1">{caption.analytics.bestPostingTime.map((time, idx) => (<span key={idx} className="px-2 py-0.5 bg-blue-100 text-blue-800 rounded-full text-[10px] font-semibold">{time}</span>))}</div>
+                                                  </div>
+                                                  {caption.analytics.improvementTips.length > 0 && (
+                                                    <div className="bg-amber-50 p-2 rounded-lg">
+                                                      <h6 className="font-semibold text-[10px] mb-1.5 text-amber-900">💡 Tips</h6>
+                                                      <ul className="space-y-1 text-[10px] text-gray-700">{caption.analytics.improvementTips.map((tip, idx) => (<li key={idx} className="flex items-start gap-1"><span className="text-amber-600 mt-0.5">•</span><span>{tip}</span></li>))}</ul>
+                                                    </div>
+                                                  )}
+                                                </motion.div>
+                                              )}
+                                            </AnimatePresence>
+                                          </div>
+                                        )}
+                                      </motion.div>
+                                    </div>
+                                  ))}
+                                </motion.div>
+                              </div>
+                              <div className="hidden md:grid md:grid-cols-3 gap-4">
+                                {captions.map((caption) => (
+                                  <motion.div key={caption.id} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="border-2 border-gray-100 rounded-xl p-4 hover:border-indigo-200 transition-colors bg-gradient-to-br from-white to-gray-50 flex flex-col">
+                                    <div className="flex justify-between items-center mb-3">
+                                      <span className="text-xs font-semibold text-gray-500">Caption {caption.variantNumber}</span>
+                                      {caption.analytics && (
+                                        <div className="flex items-center gap-1 bg-gradient-to-r from-indigo-50 to-purple-50 px-3 py-1 rounded-full">
+                                          <TrendingUp className="w-4 h-4 text-indigo-600" />
+                                          <span className="text-sm font-bold text-indigo-600">{caption.analytics.engagementScore.toFixed(0)}</span>
+                                        </div>
+                                      )}
+                                    </div>
+                                    {(caption.platform === 'youtube_shorts' || caption.platform === 'youtube_long') && caption.title ? (
+                                      <div className="mb-4">
+                                        <div className="mb-3">
+                                          <div className="flex items-center justify-between mb-1"><span className="text-xs font-semibold text-gray-500 uppercase">Title</span>
+                                            <CopyToClipboard text={caption.title} onCopy={() => { setCopiedId(`${caption.id}-title`); setTimeout(() => setCopiedId(null), 2000); }}><button className="flex items-center gap-1 text-xs text-indigo-600 hover:text-indigo-700 font-medium">{copiedId === `${caption.id}-title` ? <><Check className="w-3 h-3" />Copied</> : <><Copy className="w-3 h-3" />Copy</>}</button></CopyToClipboard>
+                                          </div>
+                                          <p className="text-gray-900 font-semibold text-sm">{caption.title}</p>
+                                        </div>
+                                        {caption.description && (
+                                          <div>
+                                            <div className="flex items-center justify-between mb-1"><span className="text-xs font-semibold text-gray-500 uppercase">Description</span>
+                                              <CopyToClipboard text={caption.description} onCopy={() => { setCopiedId(`${caption.id}-description`); setTimeout(() => setCopiedId(null), 2000); }}><button className="flex items-center gap-1 text-xs text-indigo-600 hover:text-indigo-700 font-medium">{copiedId === `${caption.id}-description` ? <><Check className="w-3 h-3" />Copied</> : <><Copy className="w-3 h-3" />Copy</>}</button></CopyToClipboard>
+                                            </div>
+                                            <p className="text-gray-700 whitespace-pre-wrap leading-relaxed text-sm">{caption.description}</p>
+                                          </div>
+                                        )}
+                                      </div>
+                                    ) : (
+                                      <p className="text-gray-800 whitespace-pre-wrap mb-4 leading-relaxed text-sm">{caption.generatedCaption}</p>
+                                    )}
+                                    <div className="flex flex-wrap gap-2 mb-4">
+                                      {caption.hashtags.map((tag, idx) => (<span key={idx} className="text-indigo-600 text-xs font-medium bg-indigo-50 px-2 py-1 rounded-lg">{tag.startsWith('#') ? tag : `#${tag}`}</span>))}
+                                    </div>
+                                    <div className="mt-auto flex gap-2">
+                                      <CopyToClipboard text={getCopyText(caption)} onCopy={() => { setCopiedId(caption.id); setTimeout(() => setCopiedId(null), 2000); }}>
+                                        <motion.button whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }} className={`flex-1 py-2 rounded-lg font-semibold transition-all flex items-center justify-center gap-2 text-sm ${copiedId === caption.id ? 'bg-green-500 text-white' : 'bg-gradient-to-r from-green-500 to-emerald-500 text-white hover:shadow-lg'}`}>
+                                          {copiedId === caption.id ? <><Check className="w-4 h-4" />Copied!</> : <><Copy className="w-4 h-4" />Copy</>}
+                                        </motion.button>
+                                      </CopyToClipboard>
+                                      <motion.button whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} onClick={() => handleShare(caption)} className="px-3 py-2 rounded-lg border-2 border-indigo-200 text-indigo-600 hover:bg-indigo-50 transition-all" title="Share">
+                                        <Share2 className="w-4 h-4" />
+                                      </motion.button>
+                                    </div>
+                                    {caption.analytics && (
+                                      <div className="border-t border-gray-100 pt-4 mt-4">
+                                        <button onClick={() => setExpandedAnalytics(prev => ({ ...prev, [caption.id]: !prev[caption.id] }))} className="w-full flex items-center justify-between text-xs font-bold text-gray-900 hover:text-indigo-600 transition-colors mb-3">
+                                          <span className="flex items-center gap-1"><BarChart3 className="w-3 h-3 text-indigo-600" />Detailed Analytics</span>
+                                          {expandedAnalytics[caption.id] ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                                        </button>
+                                        <AnimatePresence>
+                                          {expandedAnalytics[caption.id] && (
+                                            <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} transition={{ duration: 0.3 }} className="overflow-hidden">
+                                              <div className="grid grid-cols-3 gap-2 mb-3">
+                                                <div className="text-center p-2 bg-gradient-to-br from-indigo-50 to-indigo-100 rounded-lg"><div className="text-lg font-bold text-indigo-600">{caption.analytics.engagementScore.toFixed(0)}</div><div className="text-[10px] text-gray-700 font-medium">Engagement</div></div>
+                                                <div className="text-center p-2 bg-gradient-to-br from-purple-50 to-purple-100 rounded-lg"><div className="text-lg font-bold text-purple-600">{caption.analytics.viralityScore.toFixed(0)}</div><div className="text-[10px] text-gray-700 font-medium">Virality</div></div>
+                                                <div className="text-center p-2 bg-gradient-to-br from-green-50 to-green-100 rounded-lg"><div className="text-xs font-bold text-green-600">{caption.analytics.reachEstimate}</div><div className="text-[10px] text-gray-700 font-medium">Reach</div></div>
+                                              </div>
+                                              <div className="space-y-2 mb-3">
+                                                {[{ label: 'Hashtags', score: caption.analytics.hashtagScore, icon: Hash }, { label: 'Length', score: caption.analytics.lengthScore, icon: MessageSquare }, { label: 'Keywords', score: caption.analytics.keywordScore, icon: Zap }].map((item, idx) => (
+                                                  <div key={idx}>
+                                                    <div className="flex justify-between items-center text-[10px] mb-1"><span className="flex items-center gap-1 font-medium text-gray-700"><item.icon className="w-3 h-3" />{item.label}</span><span className="font-bold text-indigo-600">{item.score.toFixed(0)}%</span></div>
+                                                    <div className="w-full bg-gray-200 rounded-full h-1.5 overflow-hidden"><motion.div initial={{ width: 0 }} animate={{ width: `${item.score}%` }} transition={{ duration: 1, delay: idx * 0.1 }} className="bg-gradient-to-r from-indigo-500 to-purple-500 h-1.5 rounded-full" /></div>
+                                                  </div>
+                                                ))}
+                                              </div>
+                                              <div className="bg-blue-50 p-2 rounded-lg mb-2">
+                                                <h6 className="font-semibold text-[10px] mb-1.5 flex items-center gap-1 text-blue-900"><Clock className="w-3 h-3" />Best Times</h6>
+                                                <div className="flex flex-wrap gap-1">{caption.analytics.bestPostingTime.map((time, idx) => (<span key={idx} className="px-2 py-0.5 bg-blue-100 text-blue-800 rounded-full text-[10px] font-semibold">{time}</span>))}</div>
+                                              </div>
+                                              {caption.analytics.improvementTips.length > 0 && (
+                                                <div className="bg-amber-50 p-2 rounded-lg">
+                                                  <h6 className="font-semibold text-[10px] mb-1.5 text-amber-900">💡 Tips</h6>
+                                                  <ul className="space-y-1 text-[10px] text-gray-700">{caption.analytics.improvementTips.map((tip, idx) => (<li key={idx} className="flex items-start gap-1"><span className="text-amber-600 mt-0.5">•</span><span>{tip}</span></li>))}</ul>
+                                                </div>
+                                              )}
+                                            </motion.div>
+                                          )}
+                                        </AnimatePresence>
+                                      </div>
+                                    )}
+                                  </motion.div>
+                                ))}
+                              </div>
+                            </div>
+                          </motion.div>
+                        );
+                      });
+                    })()}
+                  </div>
+                </div>
+              )}
+            </main>
+          </div>
+        </div>
+
+        {/* ─── Logout Modal ─── */}
+        <AnimatePresence>
+          {showLogoutModal && (
+            <>
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                onClick={() => setShowLogoutModal(false)}
+                className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[100]"
+              />
+              <motion.div
+                initial={{ opacity: 0, scale: 0.95, y: 20 }}
+                animate={{ opacity: 1, scale: 1, y: 0 }}
+                exit={{ opacity: 0, scale: 0.95, y: 20 }}
+                className="fixed inset-0 z-[100] flex items-center justify-center p-4"
+              >
+                <div className="bg-white rounded-2xl shadow-2xl p-6 w-full max-w-md border border-gray-100">
+                  <div className="flex items-center justify-between mb-4">
+                    <h3 className="text-xl font-bold text-gray-900">Confirm Logout</h3>
+                    <button onClick={() => setShowLogoutModal(false)} className="p-1 hover:bg-gray-100 rounded-lg transition-colors">
+                      <XIcon className="w-5 h-5 text-gray-500" />
+                    </button>
+                  </div>
+                  <p className="text-gray-600 mb-6">Are you sure you want to log out? You'll need to sign in again to access your account.</p>
+                  <div className="flex gap-3">
+                    <motion.button whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }} onClick={() => setShowLogoutModal(false)} className="flex-1 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg font-semibold hover:bg-gray-200 transition-colors">
+                      Cancel
+                    </motion.button>
+                    <motion.button
+                      whileHover={{ scale: 1.02 }}
+                      whileTap={{ scale: 0.98 }}
+                      onClick={() => { setShowLogoutModal(false); dispatch(logout()); navigate('/'); }}
+                      className="flex-1 px-4 py-2 bg-gradient-to-r from-red-600 to-red-500 text-white rounded-lg font-semibold hover:shadow-lg transition-all"
+                    >
+                      Logout
+                    </motion.button>
+                  </div>
+                </div>
+              </motion.div>
+            </>
+          )}
+        </AnimatePresence>
+      </>
+    );
+  }
+
+  // ============ GUEST LAYOUT ============
   return (
     <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-purple-50">
       <Navbar
@@ -657,17 +1250,7 @@ export default function Dashboard() {
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ duration: 0.5 }}
               >
-                {user?.name ? (
-                  <>
-                    <h2 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2">
-                      Welcome, {user.name}! 👋
-                    </h2>
-                    <p className="text-sm sm:text-base text-gray-600">
-                      Generate engaging captions for every platform
-                    </p>
-                  </>
-                ) : (
-                  <>
+                <>
                     <h2 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2">
                       🚀 Start Generating Your First Caption
                     </h2>
@@ -675,90 +1258,10 @@ export default function Dashboard() {
                       Fill in the details below and watch AI create amazing captions for you
                     </p>
                   </>
-                )}
               </motion.div>
 
-              {/* Usage Stats - Compact */}
-              {usage && user && (
-                <div className="flex items-center gap-4">
-                  <div className="text-right">
-                    <div className="text-sm text-gray-600">Monthly Usage</div>
-                    <div className="text-xl font-bold text-indigo-600">
-                      {usage.captionsGenerated} / {usage.monthlyLimit}
-                    </div>
-                  </div>
-                  <div className="w-32 bg-gray-200 rounded-full h-2">
-                    <motion.div
-                      initial={{ width: 0 }}
-                      animate={{ width: `${Math.min(progressPercentage, 100)}%` }}
-                      transition={{ duration: 1, ease: "easeOut" }}
-                      className="bg-gradient-to-r from-indigo-500 to-purple-500 h-2 rounded-full"
-                    />
-                  </div>
-                  <span className={`px-3 py-1 rounded-full text-xs font-semibold ${
-                    isTrialUser
-                      ? 'bg-amber-100 text-amber-700'
-                      : isFreeUser
-                        ? 'bg-gray-100 text-gray-700'
-                        : 'bg-gradient-to-r from-purple-500 to-pink-500 text-white'
-                  }`}>
-                    {isTrialUser ? `Trial: ${trialDaysLeft}d left` : isFreeUser ? 'Free' : 'Premium'}
-                  </span>
-                </div>
-              )}
             </div>
 
-            {/* Trial / Upgrade Banner */}
-            {user && isFreeUser && (
-              <motion.div
-                initial={{ opacity: 0, y: -10 }}
-                animate={{ opacity: 1, y: 0 }}
-                className="bg-gradient-to-r from-indigo-600 to-purple-600 rounded-xl p-4 mb-4 text-white flex items-center justify-between"
-              >
-                <div className="flex items-center gap-3">
-                  <Crown className="w-6 h-6" />
-                  <div>
-                    <div className="font-bold">
-                      {user.trialActivated ? 'Upgrade to Premium' : 'Start Your 7-Day Free Trial'}
-                    </div>
-                    <div className="text-xs text-indigo-100">
-                      {user.trialActivated
-                        ? '100 captions/month • Unlimited platforms • Advanced analytics'
-                        : 'Full Premium access for 7 days • No charge until trial ends'}
-                    </div>
-                  </div>
-                </div>
-                <Link
-                  to="/pricing"
-                  className="bg-white text-indigo-600 px-4 py-2 rounded-lg font-semibold text-sm hover:bg-indigo-50 transition-all whitespace-nowrap"
-                >
-                  {user.trialActivated
-                    ? `${formatCurrency(pricing.monthly)}${formatAmount(pricing.monthly.amount)}/${pricing.monthly.interval}`
-                    : 'Try Free'}
-                </Link>
-              </motion.div>
-            )}
-            {user && isTrialUser && (
-              <motion.div
-                initial={{ opacity: 0, y: -10 }}
-                animate={{ opacity: 1, y: 0 }}
-                className="bg-gradient-to-r from-amber-500 to-orange-500 rounded-xl p-4 mb-4 text-white flex items-center justify-between"
-              >
-                <div className="flex items-center gap-3">
-                  <Clock className="w-6 h-6" />
-                  <div>
-                    <div className="font-bold">Trial: {trialDaysLeft} day{trialDaysLeft !== 1 ? 's' : ''} remaining</div>
-                    <div className="text-xs text-amber-100">Your trial ends on {user.trialEndsAt ? new Date(user.trialEndsAt).toLocaleDateString() : ''}. Subscribe to keep Premium access.</div>
-                  </div>
-                </div>
-                <Link
-                  to="/pricing"
-                  className="bg-white text-amber-600 px-4 py-2 rounded-lg font-semibold text-sm hover:bg-amber-50 transition-all whitespace-nowrap"
-                >
-                  Subscribe Now
-                </Link>
-              </motion.div>
-            )}
 
             {/* Main Form Card */}
             <motion.div
