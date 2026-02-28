@@ -971,6 +971,34 @@ const togglePlatform = (platform: Platform) => {
               </span>
             </motion.div>
 
+            {/* Scroll-to-form CTA */}
+            <motion.div
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.35 }}
+              className="flex flex-col items-center gap-1.5 mb-5"
+            >
+              <button
+                onClick={() => formRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })}
+                className="inline-flex items-center gap-2.5 bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 text-white text-sm font-semibold px-5 py-2.5 rounded-full shadow-md hover:shadow-lg transition-all"
+                aria-label="Scroll to caption generator"
+              >
+                Generate your caption for free
+                <motion.div
+                  animate={{ y: [0, 4, 0] }}
+                  transition={{ duration: 1.1, repeat: Infinity, ease: 'easeInOut' }}
+                  className="flex flex-col items-center"
+                >
+                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+                  </svg>
+                  <svg className="w-4 h-4 -mt-2.5 opacity-50" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+                  </svg>
+                </motion.div>
+              </button>
+            </motion.div>
+
             {/* Quick Benefits Carousel */}
             <BenefitsCarousel />
 
@@ -1003,36 +1031,6 @@ const togglePlatform = (platform: Platform) => {
               ))}
             </div>
 
-            {/* Scroll-down CTA */}
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ delay: 0.5 }}
-              className="flex flex-col items-center gap-3 mb-8"
-            >
-              <p className="text-sm text-gray-500 font-medium">No credit card • No signup required</p>
-              <button
-                onClick={() => formRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })}
-                className="flex flex-col items-center gap-1 group"
-                aria-label="Scroll to caption generator"
-              >
-                <span className="text-sm font-semibold text-indigo-600 group-hover:text-indigo-700 transition-colors">
-                  Generate your caption for free
-                </span>
-                <motion.div
-                  animate={{ y: [0, 6, 0] }}
-                  transition={{ duration: 1.2, repeat: Infinity, ease: 'easeInOut' }}
-                  className="flex flex-col items-center"
-                >
-                  <svg className="w-6 h-6 text-indigo-500 group-hover:text-indigo-700 transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
-                  </svg>
-                  <svg className="w-6 h-6 text-indigo-300 group-hover:text-indigo-500 transition-colors -mt-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
-                  </svg>
-                </motion.div>
-              </button>
-            </motion.div>
           </motion.div>
         )}
 
