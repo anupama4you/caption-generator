@@ -11,5 +11,6 @@ router.use(authMiddleware);
 router.get('/', (req, res) => profileController.getProfile(req, res));
 router.put('/', (req, res) => profileController.updateProfile(req, res));
 router.get('/usage', (req, res) => profileController.getUsage(req, res));
+router.delete('/account', (req, res) => profileController.deleteAccount(req, res));
 
 export default router;

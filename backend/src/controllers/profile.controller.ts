@@ -1,6 +1,7 @@
 import { Response } from 'express';
 import { AuthRequest } from '../types';
 import prisma from '../config/database';
+import { stripeService } from '../services/stripe.service';
 
 export class ProfileController {
   async getProfile(req: AuthRequest, res: Response): Promise<Response | void> {
@@ -72,6 +73,42 @@ export class ProfileController {
     } catch (error) {
       console.error('Update profile error:', error);
       return res.status(500).json({ error: 'Failed to update profile' });
+    }
+  }
+
+  async deleteAccount(req: AuthRequest, res: Response): Promise<Response | void> {
+    try {
+      if (!req.user) {
+        return res.status(401).json({ error: 'Unauthorized' });
+      }
+
+      const user = await prisma.user.findUnique({
+        where: { id: req.user.id },
+      });
+
+      if (!user) {
+        return res.status(404).json({ error: 'User not found' });
+      }
+
+      // Cancel Stripe subscription immediately if active
+      if (user.stripeSubscriptionId && (user.subscriptionTier === 'PREMIUM' || user.subscriptionTier === 'TRIAL')) {
+        try {
+          await stripeService.cancelSubscription(user.stripeSubscriptionId);
+        } catch (stripeError) {
+          console.error('Stripe cancellation error during account deletion:', stripeError);
+          // Continue with deletion even if Stripe cancel fails
+        }
+      }
+
+      // Delete user — all related data cascades (UserProfile, UsageTracking, CaptionAttempt, PasswordResetToken)
+      await prisma.user.delete({
+        where: { id: req.user.id },
+      });
+
+      return res.json({ success: true, message: 'Account deleted successfully' });
+    } catch (error) {
+      console.error('Delete account error:', error);
+      return res.status(500).json({ error: 'Failed to delete account' });
     }
   }
 

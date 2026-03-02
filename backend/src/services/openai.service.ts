@@ -115,8 +115,8 @@ Non-negotiable rules:
             content: userPrompt,
           },
         ],
-        temperature: 0.65,
-        max_tokens: 800,
+        temperature: 0.78,
+        max_tokens: 900,
         response_format: { type: "json_object" },
       });
 
@@ -168,6 +168,154 @@ Non-negotiable rules:
     }
   }
 
+  async generateCaptionsBatched(
+    systemPrompt: string,
+    userPrompt: string,
+    platforms: Platform[],
+    format: ContentFormat,
+    urlInstructions: Partial<Record<string, string>>,
+    userProfile?: {
+      toneOfVoice?: string;
+      includeQuestions?: boolean;
+      ctaStyle?: string;
+      avoidClickbait?: boolean;
+      formalityLevel?: string;
+      emojiPreference?: boolean;
+    }
+  ): Promise<Partial<Record<string, OpenAICaptionResponse>>> {
+    try {
+      // Build user preferences section (same logic as single-platform method)
+      let userPreferences = '';
+      if (userProfile) {
+        const prefs: string[] = [];
+        if (userProfile.toneOfVoice) prefs.push(`Tone: ${userProfile.toneOfVoice}`);
+        if (userProfile.formalityLevel) {
+          const formalityMap: Record<string, string> = {
+            formal: 'Use formal, professional language. Avoid contractions and slang.',
+            balanced: 'Mix professional and conversational language appropriately.',
+            casual: 'Use casual, conversational language. Contractions and friendly tone are welcome.',
+          };
+          prefs.push(formalityMap[userProfile.formalityLevel] || '');
+        }
+        if (userProfile.emojiPreference !== undefined)
+          prefs.push(userProfile.emojiPreference ? 'Use emojis appropriately' : 'Avoid emojis or use very sparingly');
+        if (userProfile.includeQuestions !== undefined)
+          prefs.push(userProfile.includeQuestions ? 'Include engaging questions to boost interaction' : 'Avoid using questions in the caption');
+        if (userProfile.ctaStyle) {
+          const ctaMap: Record<string, string> = {
+            strong: 'Use direct, action-oriented CTAs (e.g., "Click the link!", "Buy now!")',
+            moderate: 'Use subtle, friendly CTAs (e.g., "Check it out", "Learn more")',
+            none: 'Do not include any call-to-action',
+          };
+          prefs.push(ctaMap[userProfile.ctaStyle] || '');
+        }
+        if (userProfile.avoidClickbait) prefs.push('Avoid clickbait, sensational language, or exaggerated claims.');
+        if (prefs.filter(Boolean).length > 0)
+          userPreferences = `\n\nUser Style Preferences:\n${prefs.filter(Boolean).map(p => `- ${p}`).join('\n')}`;
+      }
+
+      // Build per-platform rules block
+      const isStory = format === 'story';
+      const formatGuidance = this.getFormatGuidelines(format);
+
+      const platformRulesBlock = platforms.map(p => {
+        const guideline = this.getPlatformGuidelines(p);
+        const needsHashtags = this.batchPlatformNeedsHashtags(p, format);
+        const hashtagRule = needsHashtags ? this.getHashtagGuideline(p) : 'No hashtags — return empty array';
+        const urlNote = urlInstructions[p] ? `\n  ↳ Link: ${urlInstructions[p]}` : '';
+        return `[${p.toUpperCase()}]\n  Caption: ${guideline}\n  Hashtags: ${hashtagRule}${urlNote}`;
+      }).join('\n\n');
+
+      const isYouTubePlatform = (p: Platform) => p === 'youtube_shorts' || p === 'youtube_long';
+      const schemaExample = platforms.map(p => {
+        const yt = isYouTubePlatform(p);
+        return `    "${p}": { "variants": [{ "caption": "string"${yt ? ', "title": "string", "description": "string"' : ''}${isStory ? ', "story_slides": ["string"]' : ''}, "hashtags": ["string"], "hashtag_explanation": "string" }] }`;
+      }).join(',\n');
+
+      const developerPrompt = `Generate 3 caption variants for EACH of these platforms in a single response: ${platforms.join(', ')}
+
+VARIANT LENGTH RULES (apply to every platform):
+- Variant 1 (SHORT): ~10-15 words. Punchy hook only.
+- Variant 2 (MEDIUM): 2-4 lines (~20-40 words). Balanced.
+- Variant 3 (LONG): 5+ lines (~50-100 words). Full storytelling.
+
+Variant diversity per platform:
+- Different opening hook, CTA wording, and hashtag mix across the 3 variants.
+- No repeated sentences or identical hashtag sets within the same platform.
+
+Format: ${format}
+${formatGuidance}${isStory ? '\nStory slides: 3-5 slides, max 8 words per slide.' : ''}
+
+PER-PLATFORM RULES:
+${platformRulesBlock}${userPreferences}
+
+Non-negotiable rules:
+- Do NOT mix platform norms.
+- Follow user style preferences exactly.
+- Respect character and hashtag counts per platform above.
+
+Return ONLY valid JSON:
+{
+  "platforms": {
+${schemaExample}
+  }
+}`;
+
+      const response = await this.client.chat.completions.create({
+        model: "gpt-4o-mini",
+        messages: [
+          { role: "system", content: systemPrompt },
+          { role: "developer", content: developerPrompt },
+          { role: "user", content: userPrompt },
+        ],
+        temperature: 0.78,
+        max_tokens: Math.min(600 * platforms.length + 500, 8000),
+        response_format: { type: "json_object" },
+      });
+
+      const content = response.choices[0].message.content || '{"platforms":{}}';
+      const parsed = JSON.parse(content);
+      const result: Partial<Record<string, OpenAICaptionResponse>> = {};
+
+      for (const platform of platforms) {
+        const data = parsed.platforms?.[platform];
+        if (data && Array.isArray(data.variants) && data.variants.length > 0) {
+          while (data.variants.length < 3) data.variants.push({ ...data.variants[0] });
+          result[platform] = { variants: data.variants.slice(0, 3) };
+        } else {
+          result[platform] = {
+            variants: [
+              { caption: `Caption for ${platform}. Please try again.`, hashtags: [] },
+              { caption: `Caption for ${platform}. Please try again.`, hashtags: [] },
+              { caption: `Caption for ${platform}. Please try again.`, hashtags: [] },
+            ],
+          };
+        }
+      }
+
+      return result;
+    } catch (error) {
+      console.error("Batched OpenAI API error:", error);
+      const fallback: Partial<Record<string, OpenAICaptionResponse>> = {};
+      for (const p of platforms) {
+        fallback[p] = {
+          variants: [
+            { caption: `Error generating caption for ${p}. Please try again.`, hashtags: [] },
+            { caption: `Error generating caption for ${p}. Please try again.`, hashtags: [] },
+            { caption: `Error generating caption for ${p}. Please try again.`, hashtags: [] },
+          ],
+        };
+      }
+      return fallback;
+    }
+  }
+
+  private batchPlatformNeedsHashtags(platform: Platform, format: ContentFormat): boolean {
+    if (format === 'story') return false;
+    if (platform === 'snapchat') return false;
+    return true;
+  }
+
   async scoreKeywordRelevance(
     caption: string,
     niche: string,
@@ -189,7 +337,7 @@ Rate the keyword usage on a scale of 0-100 based on:
 Return ONLY a number between 0-100.`;
 
       const response = await this.client.chat.completions.create({
-        model: "gpt-4",
+        model: "gpt-4o-mini",
         messages: [{ role: "user", content: prompt }],
         temperature: 0.3,
         max_tokens: 10,
@@ -226,7 +374,7 @@ Rate the virality potential on a scale of 0-100 based on:
 Return ONLY a number between 0-100.`;
 
       const response = await this.client.chat.completions.create({
-        model: "gpt-4",
+        model: "gpt-4o-mini",
         messages: [{ role: "user", content: prompt }],
         temperature: 0.5,
         max_tokens: 10,
@@ -305,6 +453,21 @@ Return ONLY the JSON array, no other text.`;
       rules[platform] ??
       "Follow platform-appropriate tone, CTA, and hashtag norms."
     );
+  }
+
+  private getHashtagGuideline(platform: Platform): string {
+    const guidelines: Record<string, string> = {
+      instagram: 'Use 15-25 hashtags mixing trending, niche, and branded tags',
+      tiktok: 'Use 3-5 highly relevant hashtags',
+      youtube_shorts: 'Use 5-10 targeted hashtags',
+      youtube_long: 'Use 8-15 SEO-friendly hashtags',
+      facebook: 'Use 1-3 hashtags maximum',
+      linkedin: 'Use 3-5 professional, niche hashtags',
+      x: 'Use 2-6 sharp, trending hashtags',
+      pinterest: 'Use 4-8 discovery-focused hashtags',
+      snapchat: 'Hashtags not commonly used',
+    };
+    return guidelines[platform] || 'Use 5-10 relevant hashtags';
   }
 
   private getFormatGuidelines(format: ContentFormat): string {

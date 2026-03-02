@@ -1,15 +1,17 @@
 import { useState, useEffect, FormEvent } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { useSelector } from 'react-redux';
+import { useSelector, useDispatch } from 'react-redux';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Sparkles, Save, Settings, User as UserIcon, Zap, Hash, Crown, Loader2, X, AlertTriangle } from 'lucide-react';
+import { Sparkles, Save, Settings, User as UserIcon, Zap, Hash, Crown, Loader2, X, AlertTriangle, Trash2 } from 'lucide-react';
 import { RootState } from '../store/store';
+import { logout } from '../store/authSlice';
 import api from '../services/api';
 import AppLayout from '../components/AppLayout';
 
 export default function Profile() {
   const { user } = useSelector((state: RootState) => state.auth);
   const navigate = useNavigate();
+  const dispatch = useDispatch();
 
   const [niche, setNiche] = useState('');
   const [brandVoice, setBrandVoice] = useState('');
@@ -19,7 +21,7 @@ export default function Profile() {
 
   // New fields
   const [toneOfVoice, setToneOfVoice] = useState('');
-  const [includeQuestions, setIncludeQuestions] = useState(true);
+  const [includeQuestions, setIncludeQuestions] = useState(false);
   const [ctaStyle, setCtaStyle] = useState('moderate');
   const [avoidClickbait, setAvoidClickbait] = useState(false);
   const [formalityLevel, setFormalityLevel] = useState('balanced');
@@ -34,6 +36,8 @@ export default function Profile() {
   const [success, setSuccess] = useState(false);
   const [cancelLoading, setCancelLoading] = useState(false);
   const [showCancelConfirm, setShowCancelConfirm] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [deleteLoading, setDeleteLoading] = useState(false);
 
   useEffect(() => {
     fetchProfile();
@@ -107,7 +111,7 @@ export default function Profile() {
           emojiPreference: data.emojiPreference ?? true,
           defaultHashtags: data.defaultHashtags || '',
           toneOfVoice: data.toneOfVoice || '',
-          includeQuestions: data.includeQuestions ?? true,
+          includeQuestions: data.includeQuestions ?? false,
           ctaStyle: data.ctaStyle || 'moderate',
           avoidClickbait: data.avoidClickbait || false,
           formalityLevel: data.formalityLevel || 'balanced',
@@ -146,6 +150,20 @@ export default function Profile() {
       alert(err.response?.data?.error || 'Failed to cancel subscription. Please try again.');
     } finally {
       setCancelLoading(false);
+    }
+  };
+
+  const handleDeleteAccount = async () => {
+    setDeleteLoading(true);
+    try {
+      await api.delete('/profile/account');
+      dispatch(logout());
+      navigate('/');
+    } catch (err: any) {
+      console.error('Delete account error:', err);
+      alert(err.response?.data?.error || 'Failed to delete account. Please try again.');
+    } finally {
+      setDeleteLoading(false);
     }
   };
 
@@ -325,6 +343,62 @@ export default function Profile() {
                       </>
                     ) : (
                       'Yes, Cancel'
+                    )}
+                  </button>
+                </div>
+              </motion.div>
+            </motion.div>
+          )}
+
+          {/* Delete Account Confirmation Modal */}
+          {showDeleteConfirm && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
+              onClick={() => setShowDeleteConfirm(false)}
+            >
+              <motion.div
+                initial={{ scale: 0.9, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                onClick={(e) => e.stopPropagation()}
+                className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6"
+              >
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="w-10 h-10 bg-red-100 rounded-full flex items-center justify-center flex-shrink-0">
+                    <Trash2 className="w-5 h-5 text-red-600" />
+                  </div>
+                  <h3 className="text-2xl font-bold text-gray-900">Delete Account?</h3>
+                </div>
+                <p className="text-gray-600 mb-4">
+                  This will permanently delete your account and all associated data including your caption history, profile settings, and preferences.
+                </p>
+                {(user?.subscriptionTier === 'PREMIUM' || user?.subscriptionTier === 'TRIAL') && (
+                  <div className="bg-red-50 border border-red-200 rounded-lg p-3 mb-4 text-sm text-red-700 flex items-start gap-2">
+                    <AlertTriangle className="w-4 h-4 mt-0.5 flex-shrink-0" />
+                    <span>Your active {user.subscriptionTier === 'TRIAL' ? 'trial' : 'Premium'} subscription will be cancelled immediately with no refund.</span>
+                  </div>
+                )}
+                <p className="text-sm text-gray-500 mb-6 font-medium">This action cannot be undone.</p>
+                <div className="flex gap-3">
+                  <button
+                    onClick={() => setShowDeleteConfirm(false)}
+                    className="flex-1 px-4 py-3 bg-gray-200 text-gray-700 rounded-lg font-semibold hover:bg-gray-300 transition-all"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={handleDeleteAccount}
+                    disabled={deleteLoading}
+                    className="flex-1 px-4 py-3 bg-red-600 text-white rounded-lg font-semibold hover:bg-red-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                  >
+                    {deleteLoading ? (
+                      <>
+                        <Loader2 className="w-5 h-5 animate-spin" />
+                        Deleting...
+                      </>
+                    ) : (
+                      'Yes, Delete Account'
                     )}
                   </button>
                 </div>
@@ -538,6 +612,33 @@ export default function Profile() {
                   Example: #MyBrand #Marketing #ContentCreator
                 </p>
               </div>
+            </motion.div>
+
+            {/* Danger Zone */}
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.4 }}
+              className="bg-white rounded-xl shadow-lg p-5 border border-red-100"
+            >
+              <h3 className="text-lg font-bold text-red-600 mb-1 flex items-center gap-2">
+                <AlertTriangle className="w-5 h-5" />
+                Danger Zone
+              </h3>
+              <p className="text-sm text-gray-500 mb-4">
+                Once you delete your account, all your data — captions, history, and settings — will be permanently removed. This action cannot be undone.
+                {(user?.subscriptionTier === 'PREMIUM' || user?.subscriptionTier === 'TRIAL') && (
+                  <span className="block mt-1 text-red-500 font-medium">Your active subscription will also be cancelled immediately.</span>
+                )}
+              </p>
+              <button
+                type="button"
+                onClick={() => setShowDeleteConfirm(true)}
+                className="flex items-center gap-2 px-4 py-2 bg-red-50 text-red-600 border border-red-200 rounded-lg hover:bg-red-100 transition-all text-sm font-semibold"
+              >
+                <Trash2 className="w-4 h-4" />
+                Delete My Account
+              </button>
             </motion.div>
 
             {/* Save Button */}

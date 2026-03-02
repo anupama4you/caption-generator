@@ -61,38 +61,34 @@ export class CaptionController {
 
       // GUEST USER FLOW - Return captions directly without saving
       if (!req.user) {
-        // Format the response similar to authenticated users but without database IDs
-        const guestCaptions: any[] = [];
-
-        for (const platformResult of platformResults) {
-          for (let i = 0; i < platformResult.variants.length; i++) {
-            const variant = platformResult.variants[i];
-
-            // Generate analytics without saving
-            const analytics = await analyticsService.predictPerformance(
-              variant.caption,
-              variant.hashtags || [],
-              platformResult.platform,
-              userProfile
-            );
-
-            guestCaptions.push({
-              id: `guest-${platformResult.platform}-${i + 1}`,
-              platform: platformResult.platform,
-              variantNumber: i + 1,
-              generatedCaption: variant.caption,
-              title: variant.title || null,
-              description: variant.description || null,
-              hashtags: variant.hashtags || [],
-              hashtagReason: variant.hashtagReason || null,
-              storySlides: variant.storySlides || [],
-              analytics: {
-                id: `guest-analytics-${platformResult.platform}-${i + 1}`,
-                ...analytics,
-              },
-            });
-          }
-        }
+        // Generate all analytics in parallel
+        const guestCaptions = await Promise.all(
+          platformResults.flatMap((platformResult) =>
+            platformResult.variants.map(async (variant, i) => {
+              const analytics = await analyticsService.predictPerformance(
+                variant.caption,
+                variant.hashtags || [],
+                platformResult.platform,
+                userProfile
+              );
+              return {
+                id: `guest-${platformResult.platform}-${i + 1}`,
+                platform: platformResult.platform,
+                variantNumber: i + 1,
+                generatedCaption: variant.caption,
+                title: variant.title || null,
+                description: variant.description || null,
+                hashtags: variant.hashtags || [],
+                hashtagReason: variant.hashtagReason || null,
+                storySlides: variant.storySlides || [],
+                analytics: {
+                  id: `guest-analytics-${platformResult.platform}-${i + 1}`,
+                  ...analytics,
+                },
+              };
+            })
+          )
+        );
 
         return res.status(201).json({
           success: true,
@@ -122,41 +118,37 @@ export class CaptionController {
         },
       });
 
-      // Save all captions with their variants
-      for (const platformResult of platformResults) {
-        for (let i = 0; i < platformResult.variants.length; i++) {
-          const variant = platformResult.variants[i];
+      // Save all captions and analytics in parallel
+      await Promise.all(
+        platformResults.flatMap((platformResult) =>
+          platformResult.variants.map(async (variant, i) => {
+            const caption = await prisma.caption.create({
+              data: {
+                attemptId: attempt.id,
+                platform: platformResult.platform,
+                variantNumber: i + 1,
+                generatedCaption: variant.caption,
+                title: variant.title || null,
+                description: variant.description || null,
+                hashtags: variant.hashtags || [],
+                hashtagReason: variant.hashtagReason || null,
+                storySlides: variant.storySlides || [],
+              },
+            });
 
-          const caption = await prisma.caption.create({
-            data: {
-              attemptId: attempt.id,
-              platform: platformResult.platform,
-              variantNumber: i + 1,
-              generatedCaption: variant.caption,
-              title: variant.title || null,
-              description: variant.description || null,
-              hashtags: variant.hashtags || [],
-              hashtagReason: variant.hashtagReason || null,
-              storySlides: variant.storySlides || [],
-            },
-          });
+            const analytics = await analyticsService.predictPerformance(
+              caption.generatedCaption,
+              caption.hashtags,
+              platformResult.platform,
+              userProfile
+            );
 
-          // Generate analytics for each variant
-          const analytics = await analyticsService.predictPerformance(
-            caption.generatedCaption,
-            caption.hashtags,
-            platformResult.platform,
-            userProfile
-          );
-
-          await prisma.captionAnalytics.create({
-            data: {
-              captionId: caption.id,
-              ...analytics,
-            },
-          });
-        }
-      }
+            await prisma.captionAnalytics.create({
+              data: { captionId: caption.id, ...analytics },
+            });
+          })
+        )
+      );
 
       // Increment usage count
       await incrementUsage(req.user.id);
