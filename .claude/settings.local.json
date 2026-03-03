@@ -33,7 +33,9 @@
       "Bash(npm run prisma:generate:*)",
       "Bash(npm run prisma:migrate:dev:*)",
       "Bash(npm run:*)",
-      "Bash(killall:*)"
+      "Bash(killall:*)",
+      "Bash(grep -r \"5000\\\\|API_URL\\\\|VITE_API\\\\|baseURL\\\\|localhost\" /Users/anupama4you/projects/caption-generator/caption-generator/frontend/.env*)",
+      "Bash(grep -r \"5000\" /Users/anupama4you/projects/caption-generator/caption-generator/frontend/src/config*)"
     ]
   }
 }

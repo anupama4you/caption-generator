@@ -1,5 +1,5 @@
 import { motion } from 'framer-motion';
-import { Copy, Check, TrendingUp } from 'lucide-react';
+import { Copy, Check, TrendingUp, RefreshCw } from 'lucide-react';
 import { CopyToClipboard } from 'react-copy-to-clipboard';
 import { Caption } from '../../types';
 import CaptionAnalytics from './CaptionAnalytics';
@@ -10,6 +10,8 @@ interface CaptionCardProps {
   onCopy: (id: string) => void;
   expandedAnalytics: boolean;
   onToggleAnalytics: () => void;
+  onRegenerate?: () => void;
+  isRegenerating?: boolean;
 }
 
 export default function CaptionCard({
@@ -18,6 +20,8 @@ export default function CaptionCard({
   onCopy,
   expandedAnalytics,
   onToggleAnalytics,
+  onRegenerate,
+  isRegenerating = false,
 }: CaptionCardProps) {
   const isYouTube = caption.platform === 'youtube_shorts' || caption.platform === 'youtube_long';
   const hasTitle = isYouTube && caption.title;
@@ -34,13 +38,25 @@ export default function CaptionCard({
     <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
-      className="border-2 border-gray-100 rounded-xl p-4 hover:border-indigo-200 transition-colors bg-gradient-to-br from-white to-gray-50 flex flex-col"
+      className={`border-2 border-gray-100 rounded-xl p-4 hover:border-indigo-200 transition-colors bg-gradient-to-br from-white to-gray-50 flex flex-col ${isRegenerating ? 'opacity-60 pointer-events-none' : ''}`}
     >
       {/* Header */}
       <div className="flex justify-between items-center mb-3">
-        <span className="text-xs font-semibold text-gray-500">
-          Caption {caption.variantNumber}
-        </span>
+        <div className="flex items-center gap-2">
+          <span className="text-xs font-semibold text-gray-500">
+            Caption {caption.variantNumber}
+          </span>
+          {onRegenerate && (
+            <button
+              onClick={onRegenerate}
+              disabled={isRegenerating}
+              title="Regenerate this variant"
+              className="flex items-center gap-1 text-xs text-gray-400 hover:text-indigo-600 transition-colors"
+            >
+              <RefreshCw className={`w-3 h-3 ${isRegenerating ? 'animate-spin' : ''}`} />
+            </button>
+          )}
+        </div>
         {caption.analytics && (
           <div className="flex items-center gap-1 bg-gradient-to-r from-indigo-50 to-purple-50 px-3 py-1 rounded-full">
             <TrendingUp className="w-4 h-4 text-indigo-600" />

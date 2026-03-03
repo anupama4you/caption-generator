@@ -357,6 +357,92 @@ export class CaptionController {
     }
   }
 
+  async regenerateVariant(req: AuthRequest, res: Response): Promise<Response | void> {
+    try {
+      if (!req.user) {
+        return res.status(401).json({ error: 'Unauthorized' });
+      }
+
+      const { id: attemptId } = req.params;
+      const { platform, variantNumber } = req.body;
+
+      // Fetch the original attempt (must belong to this user)
+      const attempt = await prisma.captionAttempt.findFirst({
+        where: { id: attemptId, userId: req.user.id },
+      });
+
+      if (!attempt) {
+        return res.status(404).json({ success: false, message: 'Attempt not found' });
+      }
+
+      // Find the specific caption to replace
+      const existingCaption = await prisma.caption.findFirst({
+        where: { attemptId, platform, variantNumber },
+      });
+
+      if (!existingCaption) {
+        return res.status(404).json({ success: false, message: 'Caption variant not found' });
+      }
+
+      // Rebuild generation params from the stored attempt
+      const userProfile = req.userProfile;
+      const params: CaptionGenerationParams = {
+        platforms: [platform],
+        contentFormat: attempt.contentFormat as CaptionGenerationParams['contentFormat'],
+        contentDescription: attempt.contentDescription,
+        niche: attempt.niche || userProfile?.niche || undefined,
+        brandVoice: attempt.brandVoice || userProfile?.brandVoice || undefined,
+        targetAudience: attempt.targetAudience || userProfile?.targetAudience || undefined,
+        emojiPreference: attempt.emojiPreference,
+        userProfile: userProfile || undefined,
+      };
+
+      // Generate only the 1 variant needed (faster: ~380 tokens vs 900 for all 3)
+      const newVariant = await captionService.generateSingleVariant(
+        platform,
+        variantNumber as 1 | 2 | 3,
+        params
+      );
+
+      // Update the caption record
+      const updatedCaption = await prisma.caption.update({
+        where: { id: existingCaption.id },
+        data: {
+          generatedCaption: newVariant.caption,
+          title: newVariant.title || null,
+          description: newVariant.description || null,
+          hashtags: newVariant.hashtags || [],
+          hashtagReason: newVariant.hashtagReason || null,
+          storySlides: newVariant.storySlides || [],
+        },
+      });
+
+      // Replace analytics
+      await prisma.captionAnalytics.deleteMany({ where: { captionId: existingCaption.id } });
+      const analytics = await analyticsService.predictPerformance(
+        updatedCaption.generatedCaption,
+        updatedCaption.hashtags,
+        platform,
+        userProfile
+      );
+      const newAnalytics = await prisma.captionAnalytics.create({
+        data: { captionId: updatedCaption.id, ...analytics },
+      });
+
+      return res.json({
+        success: true,
+        data: { ...updatedCaption, analytics: newAnalytics },
+      });
+    } catch (error: any) {
+      console.error('Regenerate variant error:', error);
+      return res.status(500).json({
+        success: false,
+        message: 'Failed to regenerate variant',
+        error: error.message,
+      });
+    }
+  }
+
   async saveGuestCaptions(req: AuthRequest, res: Response): Promise<Response> {
     try {
       if (!req.user) {

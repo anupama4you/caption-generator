@@ -18,10 +18,12 @@ export {
   saveGuestCaptionsSchema,
   attemptIdParamSchema,
   paginationQuerySchema,
+  regenerateVariantSchema,
   type GenerateCaptionInput,
   type SaveGuestCaptionsInput,
   type AttemptIdParam,
   type PaginationQuery,
+  type RegenerateVariantInput,
 } from './caption.validator';
 
 // Profile validators

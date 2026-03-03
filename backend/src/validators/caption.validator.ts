@@ -94,7 +94,13 @@ export const paginationQuerySchema = z.object({
     .pipe(z.number().int().positive().max(100).default(10)),
 });
 
+export const regenerateVariantSchema = z.object({
+  platform: platformEnum,
+  variantNumber: z.number().int().min(1).max(3),
+});
+
 export type GenerateCaptionInput = z.infer<typeof generateCaptionSchema>;
 export type SaveGuestCaptionsInput = z.infer<typeof saveGuestCaptionsSchema>;
 export type AttemptIdParam = z.infer<typeof attemptIdParamSchema>;
 export type PaginationQuery = z.infer<typeof paginationQuerySchema>;
+export type RegenerateVariantInput = z.infer<typeof regenerateVariantSchema>;

@@ -316,6 +316,98 @@ ${schemaExample}
     return true;
   }
 
+  async generateSingleVariant(
+    systemPrompt: string,
+    userPrompt: string,
+    platform: Platform,
+    format: ContentFormat,
+    variantNumber: 1 | 2 | 3,
+    userProfile?: {
+      toneOfVoice?: string;
+      includeQuestions?: boolean;
+      ctaStyle?: string;
+      avoidClickbait?: boolean;
+      formalityLevel?: string;
+      emojiPreference?: boolean;
+    }
+  ): Promise<OpenAICaptionResponse> {
+    const lengthMap = {
+      1: 'SHORT: maximum 1 line (~10-15 words). Punchy hook only.',
+      2: 'MEDIUM: 2-4 lines (~20-40 words). Balanced with context.',
+      3: 'LONG: 4-5 lines (~50-70 words). Storytelling with full context.',
+    };
+    const isYouTube = platform === 'youtube_shorts' || platform === 'youtube_long';
+    const needsHashtags = this.batchPlatformNeedsHashtags(platform, format);
+
+    let userPreferences = '';
+    if (userProfile) {
+      const prefs: string[] = [];
+      if (userProfile.toneOfVoice) prefs.push(`Tone: ${userProfile.toneOfVoice}`);
+      if (userProfile.formalityLevel) {
+        const map: Record<string, string> = {
+          formal: 'Formal, professional language.',
+          balanced: 'Mix professional and conversational.',
+          casual: 'Casual, conversational language.',
+        };
+        prefs.push(map[userProfile.formalityLevel] || '');
+      }
+      if (userProfile.emojiPreference !== undefined)
+        prefs.push(userProfile.emojiPreference ? 'Use emojis appropriately' : 'Avoid emojis');
+      if (userProfile.includeQuestions !== undefined)
+        prefs.push(userProfile.includeQuestions ? 'Include an engaging question' : 'No questions');
+      if (userProfile.ctaStyle) {
+        const ctaMap: Record<string, string> = {
+          strong: 'Direct, action-oriented CTA',
+          moderate: 'Subtle, friendly CTA',
+          none: 'No CTA',
+        };
+        prefs.push(ctaMap[userProfile.ctaStyle] || '');
+      }
+      if (userProfile.avoidClickbait) prefs.push('No clickbait or exaggerated claims.');
+      if (prefs.filter(Boolean).length > 0)
+        userPreferences = `\nUser preferences:\n${prefs.filter(Boolean).map(p => `- ${p}`).join('\n')}`;
+    }
+
+    const developerPrompt = `Generate exactly 1 caption variant for ${platform}.
+
+Length: ${lengthMap[variantNumber]}
+Platform: ${this.getPlatformGuidelines(platform)}
+Format: ${this.getFormatGuidelines(format)}
+Hashtags: ${needsHashtags ? this.getHashtagGuideline(platform) : 'Return empty array'}${userPreferences}
+
+Return ONLY valid JSON:
+{
+  "variants": [{
+    "caption": "string"${isYouTube ? ',\n    "title": "string",\n    "description": "string"' : ''},
+    "hashtags": ["string"],
+    "hashtag_explanation": "string"
+  }]
+}`;
+
+    try {
+      const response = await this.client.chat.completions.create({
+        model: 'gpt-4o-mini',
+        messages: [
+          { role: 'system', content: systemPrompt },
+          { role: 'developer', content: developerPrompt },
+          { role: 'user', content: userPrompt },
+        ],
+        temperature: 0.82,
+        max_tokens: 380,
+        response_format: { type: 'json_object' },
+      });
+
+      const parsed = JSON.parse(response.choices[0].message.content || '{"variants":[]}');
+      if (!parsed.variants?.[0]) throw new Error('Empty response');
+      return { variants: [parsed.variants[0]] };
+    } catch (error) {
+      console.error('Single variant generation error:', error);
+      return {
+        variants: [{ caption: `Regeneration failed for ${platform}. Please try again.`, hashtags: [] }],
+      };
+    }
+  }
+
   async scoreKeywordRelevance(
     caption: string,
     niche: string,

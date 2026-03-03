@@ -9,6 +9,7 @@ import {
   saveGuestCaptionsSchema,
   attemptIdParamSchema,
   paginationQuerySchema,
+  regenerateVariantSchema,
 } from '../validators';
 
 const router = Router();
@@ -49,6 +50,12 @@ router.put('/attempts/:id/favorite', validateParams(attemptIdParamSchema), (req,
 );
 router.delete('/attempts/:id', validateParams(attemptIdParamSchema), (req, res) =>
   captionController.deleteAttempt(req, res)
+);
+router.post(
+  '/attempts/:id/regenerate',
+  validateParams(attemptIdParamSchema),
+  validateBody(regenerateVariantSchema),
+  (req, res) => captionController.regenerateVariant(req, res)
 );
 
 export default router;

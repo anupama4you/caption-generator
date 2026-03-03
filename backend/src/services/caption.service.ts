@@ -136,6 +136,50 @@ Hashtag level: ${hashtagLevel}`;
     return prompt;
   }
 
+  async generateSingleVariant(
+    platform: Platform,
+    variantNumber: 1 | 2 | 3,
+    params: CaptionGenerationParams
+  ): Promise<{ caption: string; title?: string; description?: string; hashtags: string[]; hashtagReason?: string; storySlides?: string[] }> {
+    const userProfilePrefs = params.userProfile ? {
+      toneOfVoice: params.userProfile.toneOfVoice || undefined,
+      includeQuestions: params.userProfile.includeQuestions,
+      ctaStyle: params.userProfile.ctaStyle || undefined,
+      avoidClickbait: params.userProfile.avoidClickbait,
+      formalityLevel: params.userProfile.formalityLevel || undefined,
+      emojiPreference: params.userProfile.emojiPreference,
+    } : undefined;
+
+    const response = await this.openAI.generateSingleVariant(
+      this.getSystemPrompt(),
+      this.buildUserPrompt(platform, params),
+      platform,
+      params.contentFormat,
+      variantNumber,
+      userProfilePrefs
+    );
+
+    const v = response.variants[0];
+    const defaultHashtags = params.userProfile?.defaultHashtags
+      ? params.userProfile.defaultHashtags
+          .split(/\s+/)
+          .filter(tag => tag.trim())
+          .map(tag => tag.startsWith('#') ? tag : `#${tag}`)
+      : [];
+    const generatedHashtags = (v.hashtags || []).map(tag =>
+      tag.startsWith('#') ? tag : `#${tag}`
+    );
+
+    return {
+      caption: v.caption,
+      title: v.title,
+      description: v.description,
+      hashtags: [...new Set([...generatedHashtags, ...defaultHashtags])],
+      hashtagReason: v.hashtag_explanation,
+      storySlides: v.story_slides,
+    };
+  }
+
   private resolvePlatforms(requested: Platform[]): Platform[] {
     if (requested.includes('all')) {
       return [
