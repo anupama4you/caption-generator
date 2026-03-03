@@ -4,7 +4,7 @@ import { useSelector, useDispatch } from 'react-redux';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Sparkles, LogOut, Menu, X as XIcon, Crown,
-  History as HistoryIcon, User, Settings,
+  History as HistoryIcon, User, Settings, Shield,
 } from 'lucide-react';
 import mainLogo from '../assets/images/main-logo.svg';
 import { RootState } from '../store/store';
@@ -132,6 +132,15 @@ export default function AppLayout({ children }: AppLayoutProps) {
                 Pricing
               </Link>
             </div>
+            {user?.isAdmin && (
+              <div>
+                <p className="text-xs font-semibold text-gray-400 uppercase px-2 mb-1 tracking-wider">Admin</p>
+                <Link to="/admin" className={navItem('/admin')}>
+                  <Shield className="w-4 h-4 flex-shrink-0" />
+                  Dashboard
+                </Link>
+              </div>
+            )}
           </nav>
 
           {/* Bottom: Upgrade */}

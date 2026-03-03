@@ -6,6 +6,7 @@ export interface AuthRequest extends Request {
     id: string;
     email: string;
     subscriptionTier: string;
+    isAdmin: boolean;
   };
   usage?: UsageTracking;
   userProfile?: UserProfile | null;

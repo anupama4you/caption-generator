@@ -11,7 +11,7 @@ interface EmailOptions {
 }
 
 class EmailService {
-  private fromEmail = 'Caption Generator <noreply@yourdomain.com>';
+  private fromEmail = 'Caption Generator <noreply@captions4you.com>';
 
   async sendEmail(options: EmailOptions): Promise<boolean> {
     try {

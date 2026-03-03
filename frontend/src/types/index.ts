@@ -5,6 +5,7 @@ export interface User {
   subscriptionTier: 'FREE' | 'TRIAL' | 'PREMIUM';
   trialEndsAt?: string | null;
   trialActivated?: boolean;
+  isAdmin?: boolean;
 }
 
 export interface AuthResponse {

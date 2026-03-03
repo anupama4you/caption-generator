@@ -5,6 +5,7 @@ export interface JWTPayload {
   id: string;
   email: string;
   subscriptionTier: string;
+  isAdmin: boolean;
 }
 
 export class JWTUtil {

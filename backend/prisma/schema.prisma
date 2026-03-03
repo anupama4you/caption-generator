@@ -56,6 +56,9 @@ model User {
   trialEndsAt    DateTime?
   trialActivated Boolean  @default(false)
 
+  // Admin
+  isAdmin Boolean @default(false)
+
   // Relations
   profile             UserProfile?
   captionAttempts     CaptionAttempt[]

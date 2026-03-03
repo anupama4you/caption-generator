@@ -55,26 +55,22 @@ export class OAuthController {
 
   // Helper function to generate auth response
   private generateAuthResponse(user: any) {
-    const accessToken = JWTUtil.generateAccessToken({
+    const tokenPayload = {
       id: user.id,
       email: user.email,
       subscriptionTier: user.subscriptionTier,
-    });
-
-    const refreshToken = JWTUtil.generateRefreshToken({
-      id: user.id,
-      email: user.email,
-      subscriptionTier: user.subscriptionTier,
-    });
+      isAdmin: user.isAdmin ?? false,
+    };
 
     return {
-      accessToken,
-      refreshToken,
+      accessToken: JWTUtil.generateAccessToken(tokenPayload),
+      refreshToken: JWTUtil.generateRefreshToken(tokenPayload),
       user: {
         id: user.id,
         email: user.email,
         name: user.name,
         subscriptionTier: user.subscriptionTier,
+        isAdmin: user.isAdmin ?? false,
         createdAt: user.createdAt,
       },
     };
