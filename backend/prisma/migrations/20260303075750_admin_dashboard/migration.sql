@@ -1,12 +1,12 @@
 -- AlterEnum
-ALTER TYPE "SubscriptionTier" ADD VALUE 'TRIAL';
+ALTER TYPE "SubscriptionTier" ADD VALUE IF NOT EXISTS 'TRIAL';
 
 -- AlterTable
-ALTER TABLE "User" ADD COLUMN     "trialActivated" BOOLEAN NOT NULL DEFAULT false,
-ADD COLUMN     "trialEndsAt" TIMESTAMP(3);
+ALTER TABLE "User" ADD COLUMN IF NOT EXISTS "trialActivated" BOOLEAN NOT NULL DEFAULT false;
+ALTER TABLE "User" ADD COLUMN IF NOT EXISTS "trialEndsAt" TIMESTAMP(3);
 
 -- CreateTable
-CREATE TABLE "PasswordResetToken" (
+CREATE TABLE IF NOT EXISTS "PasswordResetToken" (
     "id" TEXT NOT NULL,
     "userId" TEXT NOT NULL,
     "token" TEXT NOT NULL,
@@ -18,7 +18,7 @@ CREATE TABLE "PasswordResetToken" (
 );
 
 -- CreateTable
-CREATE TABLE "ProcessedWebhookEvent" (
+CREATE TABLE IF NOT EXISTS "ProcessedWebhookEvent" (
     "id" TEXT NOT NULL,
     "eventType" TEXT NOT NULL,
     "processedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -27,16 +27,23 @@ CREATE TABLE "ProcessedWebhookEvent" (
 );
 
 -- CreateIndex
-CREATE UNIQUE INDEX "PasswordResetToken_token_key" ON "PasswordResetToken"("token");
+CREATE UNIQUE INDEX IF NOT EXISTS "PasswordResetToken_token_key" ON "PasswordResetToken"("token");
 
 -- CreateIndex
-CREATE INDEX "PasswordResetToken_token_idx" ON "PasswordResetToken"("token");
+CREATE INDEX IF NOT EXISTS "PasswordResetToken_token_idx" ON "PasswordResetToken"("token");
 
 -- CreateIndex
-CREATE INDEX "PasswordResetToken_userId_idx" ON "PasswordResetToken"("userId");
+CREATE INDEX IF NOT EXISTS "PasswordResetToken_userId_idx" ON "PasswordResetToken"("userId");
 
 -- CreateIndex
-CREATE INDEX "ProcessedWebhookEvent_processedAt_idx" ON "ProcessedWebhookEvent"("processedAt");
+CREATE INDEX IF NOT EXISTS "ProcessedWebhookEvent_processedAt_idx" ON "ProcessedWebhookEvent"("processedAt");
 
 -- AddForeignKey
-ALTER TABLE "PasswordResetToken" ADD CONSTRAINT "PasswordResetToken_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+DO $$ BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint WHERE conname = 'PasswordResetToken_userId_fkey'
+  ) THEN
+    ALTER TABLE "PasswordResetToken" ADD CONSTRAINT "PasswordResetToken_userId_fkey"
+      FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+  END IF;
+END $$;
