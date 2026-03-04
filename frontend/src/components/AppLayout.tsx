@@ -4,7 +4,7 @@ import { useSelector, useDispatch } from 'react-redux';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Sparkles, LogOut, Menu, X as XIcon, Crown,
-  History as HistoryIcon, User, Settings, Shield,
+  History as HistoryIcon, User, Settings, Shield, Hash,
 } from 'lucide-react';
 import mainLogo from '../assets/images/main-logo.svg';
 import { RootState } from '../store/store';
@@ -119,6 +119,13 @@ export default function AppLayout({ children }: AppLayoutProps) {
               <Link to="/history" className={navItem('/history')}>
                 <HistoryIcon className="w-4 h-4 flex-shrink-0" />
                 History
+              </Link>
+              <Link to="/hashtags" className={navItem('/hashtags')}>
+                <Hash className="w-4 h-4 flex-shrink-0" />
+                Hashtags
+                {user?.subscriptionTier !== 'PREMIUM' && (
+                  <Crown className="w-3 h-3 ml-auto text-amber-400" />
+                )}
               </Link>
             </div>
             <div>

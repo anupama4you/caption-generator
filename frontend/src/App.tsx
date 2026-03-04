@@ -14,6 +14,7 @@ import PrivacyPolicy from './pages/PrivacyPolicy';
 import TermsOfService from './pages/TermsOfService';
 import RefundPolicy from './pages/RefundPolicy';
 import Admin from './pages/Admin';
+import HashtagResearch from './pages/HashtagResearch';
 import { ErrorBoundary } from './components/common/ErrorBoundary';
 import ServerDownOverlay from './components/common/ServerDownOverlay';
 
@@ -75,6 +76,10 @@ function App() {
         <Route path="/terms-of-service" element={<TermsOfService />} />
         <Route path="/refund-policy" element={<RefundPolicy />} />
         <Route path="/admin" element={<Admin />} />
+        <Route
+          path="/hashtags"
+          element={isAuthenticated ? <HashtagResearch /> : <Navigate to="/" />}
+        />
       </Routes>
     </ErrorBoundary>
   );
