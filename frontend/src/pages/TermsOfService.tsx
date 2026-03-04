@@ -11,6 +11,7 @@ export default function TermsOfService() {
         <meta name="description" content="Read the Captions4You terms of service. Understand the rules and conditions for using our AI caption generator." />
         <link rel="canonical" href="https://www.captions4you.com/terms-of-service" />
         <meta name="robots" content="noindex, follow" />
+        <meta name="tiktok-developers-site-verification" content="Ts06j9DYThUCYzu0Jkdb1Dh9lzbtFk1T" />
       </Helmet>
       <nav className="bg-white/80 backdrop-blur-lg shadow-sm border-b border-gray-200 sticky top-0 z-50">
         <div className="container mx-auto px-4 sm:px-6 py-4 flex items-center gap-3">
