@@ -19,6 +19,7 @@
     "react": "^18.3.1",
     "react-copy-to-clipboard": "^5.1.0",
     "react-dom": "^18.3.1",
+    "react-helmet-async": "^3.0.0",
     "react-redux": "^9.2.0",
     "react-router-dom": "^7.1.1",
     "react-social-icons": "^6.25.0"

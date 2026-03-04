@@ -1,4 +1,5 @@
 import { useState, useEffect, FormEvent, useRef } from 'react';
+import { Helmet } from 'react-helmet-async';
 import { Link } from 'react-router-dom';
 import { useSelector } from 'react-redux';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -1009,6 +1010,11 @@ const togglePlatform = (platform: Platform) => {
   // ============ GUEST LAYOUT ============
   return (
     <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-purple-50">
+      <Helmet>
+        <title>Free AI Caption Generator for Instagram, TikTok & YouTube | Captions4You</title>
+        <meta name="description" content="Generate viral social media captions in seconds with AI. Free for Instagram, TikTok, YouTube, Facebook, LinkedIn & more. No signup required to try!" />
+        <link rel="canonical" href="https://www.captions4you.com/" />
+      </Helmet>
       <Navbar
         onLoginClick={() => setShowLoginModal(true)}
         onRegisterClick={() => setShowRegisterModal(true)}

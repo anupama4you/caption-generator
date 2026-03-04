@@ -4,7 +4,7 @@ import { Navigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import {
   Users, FileText, TrendingUp, Crown, Shield, Search,
-  ChevronLeft, ChevronRight, Trash2, BarChart2, RefreshCw,
+  ChevronLeft, ChevronRight, Trash2, BarChart2, RefreshCw, AlertCircle, CheckCircle,
 } from 'lucide-react';
 import { RootState } from '../store/store';
 import api from '../services/api';
@@ -87,7 +87,14 @@ export default function Admin() {
   const [usersTierFilter, setUsersTierFilter] = useState('');
   const [usersLoading, setUsersLoading] = useState(false);
   const [tierUpdating, setTierUpdating] = useState<string | null>(null);
+  const [adminUpdating, setAdminUpdating] = useState<string | null>(null);
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
+  const [toast, setToast] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
+
+  const showToast = (type: 'success' | 'error', message: string) => {
+    setToast({ type, message });
+    setTimeout(() => setToast(null), 3500);
+  };
 
   // Captions
   const [captions, setCaptions] = useState<CaptionAttempt[]>([]);
@@ -153,10 +160,24 @@ export default function Admin() {
       setTierUpdating(userId);
       await api.patch(`/admin/users/${userId}/tier`, { tier });
       setUsers(prev => prev.map(u => u.id === userId ? { ...u, subscriptionTier: tier as any } : u));
-    } catch (e) {
-      console.error(e);
+      showToast('success', 'Subscription tier updated');
+    } catch (e: any) {
+      showToast('error', e?.response?.data?.error || 'Failed to update tier');
     } finally {
       setTierUpdating(null);
+    }
+  };
+
+  const handleAdminToggle = async (userId: string, currentIsAdmin: boolean) => {
+    try {
+      setAdminUpdating(userId);
+      await api.patch(`/admin/users/${userId}/admin`, { isAdmin: !currentIsAdmin });
+      setUsers(prev => prev.map(u => u.id === userId ? { ...u, isAdmin: !currentIsAdmin } : u));
+      showToast('success', !currentIsAdmin ? 'Admin access granted' : 'Admin access removed');
+    } catch (e: any) {
+      showToast('error', e?.response?.data?.error || 'Failed to update admin status');
+    } finally {
+      setAdminUpdating(null);
     }
   };
 
@@ -166,8 +187,10 @@ export default function Admin() {
       setUsers(prev => prev.filter(u => u.id !== userId));
       setUsersTotal(prev => prev - 1);
       setDeleteConfirm(null);
-    } catch (e) {
-      console.error(e);
+      showToast('success', 'User deleted');
+    } catch (e: any) {
+      showToast('error', e?.response?.data?.error || 'Failed to delete user');
+      setDeleteConfirm(null);
     }
   };
 
@@ -190,6 +213,16 @@ export default function Admin() {
           <a href="/" className="text-sm text-indigo-600 hover:text-indigo-700 font-medium">← Back to App</a>
         </div>
       </div>
+
+      {/* Toast */}
+      {toast && (
+        <div className={`fixed top-4 right-4 z-50 flex items-center gap-2 px-4 py-3 rounded-lg shadow-lg text-sm font-medium transition-all ${
+          toast.type === 'success' ? 'bg-green-50 text-green-700 border border-green-200' : 'bg-red-50 text-red-700 border border-red-200'
+        }`}>
+          {toast.type === 'success' ? <CheckCircle className="w-4 h-4" /> : <AlertCircle className="w-4 h-4" />}
+          {toast.message}
+        </div>
+      )}
 
       {/* Tabs */}
       <div className="bg-white border-b border-gray-200 px-6">
@@ -315,7 +348,7 @@ export default function Admin() {
                   <table className="w-full text-sm">
                     <thead className="bg-gray-50 border-b border-gray-100">
                       <tr>
-                        {['Name / Email', 'Tier', 'Captions', 'Joined', 'Actions'].map(h => (
+                        {['Name / Email', 'Tier', 'Captions', 'Joined', 'Admin', 'Actions'].map(h => (
                           <th key={h} className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">{h}</th>
                         ))}
                       </tr>
@@ -345,6 +378,21 @@ export default function Admin() {
                           </td>
                           <td className="px-4 py-3 text-gray-600">{u._count.captionAttempts}</td>
                           <td className="px-4 py-3 text-gray-400 text-xs">{new Date(u.createdAt).toLocaleDateString()}</td>
+                          <td className="px-4 py-3">
+                            <button
+                              onClick={() => handleAdminToggle(u.id, u.isAdmin)}
+                              disabled={adminUpdating === u.id || u.id === user?.id}
+                              title={u.id === user?.id ? "Can't change your own admin status" : u.isAdmin ? 'Remove admin' : 'Make admin'}
+                              className={`inline-flex items-center gap-1 text-xs font-medium px-2 py-1 rounded-full transition-colors disabled:opacity-40 disabled:cursor-not-allowed ${
+                                u.isAdmin
+                                  ? 'bg-indigo-100 text-indigo-700 hover:bg-indigo-200'
+                                  : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
+                              }`}
+                            >
+                              <Shield className="w-3 h-3" />
+                              {adminUpdating === u.id ? '...' : u.isAdmin ? 'Admin' : 'User'}
+                            </button>
+                          </td>
                           <td className="px-4 py-3">
                             {deleteConfirm === u.id ? (
                               <div className="flex items-center gap-2">

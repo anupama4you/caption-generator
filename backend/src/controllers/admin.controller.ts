@@ -132,16 +132,80 @@ export class AdminController {
         return res.status(400).json({ error: 'Invalid tier. Must be FREE, TRIAL, or PREMIUM' });
       }
 
-      const user = await prisma.user.update({
-        where: { id },
-        data: { subscriptionTier: tier },
-        select: { id: true, email: true, name: true, subscriptionTier: true },
-      });
+      const now = new Date();
+      const month = now.getMonth() + 1;
+      const year = now.getFullYear();
+
+      // Build tier-specific field updates
+      const tierData: Record<string, any> = { subscriptionTier: tier };
+      const MONTHLY_LIMITS: Record<string, number> = { FREE: 5, TRIAL: 30, PREMIUM: 100 };
+
+      if (tier === 'TRIAL') {
+        tierData.trialActivated = true;
+        tierData.trialEndsAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+        tierData.subscriptionStart = now;
+        tierData.subscriptionEnd = tierData.trialEndsAt;
+      } else if (tier === 'PREMIUM') {
+        tierData.subscriptionStart = now;
+        tierData.subscriptionEnd = null;
+        tierData.trialEndsAt = null;
+      } else {
+        // FREE — clear subscription dates but keep trialActivated as-is
+        tierData.subscriptionStart = null;
+        tierData.subscriptionEnd = null;
+        tierData.trialEndsAt = null;
+      }
+
+      const [user] = await Promise.all([
+        prisma.user.update({
+          where: { id },
+          data: tierData,
+          select: {
+            id: true, email: true, name: true,
+            subscriptionTier: true, trialEndsAt: true, trialActivated: true,
+          },
+        }),
+        // Update this month's usage limit so it takes effect immediately
+        prisma.usageTracking.updateMany({
+          where: { userId: id, month, year },
+          data: { monthlyLimit: MONTHLY_LIMITS[tier] },
+        }),
+      ]);
 
       return res.status(200).json({ success: true, data: user });
     } catch (error) {
       console.error('Admin updateUserTier error:', error);
       return res.status(500).json({ error: 'Failed to update user tier' });
+    }
+  }
+
+  /**
+   * PATCH /api/admin/users/:id/admin
+   */
+  async updateUserAdmin(req: AuthRequest, res: Response): Promise<Response> {
+    try {
+      const { id } = req.params;
+      const { isAdmin } = req.body;
+
+      if (typeof isAdmin !== 'boolean') {
+        return res.status(400).json({ error: 'isAdmin must be a boolean' });
+      }
+
+      // Prevent removing your own admin access
+      if (req.user?.id === id && !isAdmin) {
+        return res.status(400).json({ error: 'Cannot remove your own admin access' });
+      }
+
+      const user = await prisma.user.update({
+        where: { id },
+        data: { isAdmin },
+        select: { id: true, email: true, name: true, isAdmin: true },
+      });
+
+      return res.status(200).json({ success: true, data: user });
+    } catch (error) {
+      console.error('Admin updateUserAdmin error:', error);
+      return res.status(500).json({ error: 'Failed to update admin status' });
     }
   }
 

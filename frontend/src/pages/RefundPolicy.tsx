@@ -1,10 +1,17 @@
 import { Link } from 'react-router-dom';
 import { ArrowLeft, CheckCircle } from 'lucide-react';
+import { Helmet } from 'react-helmet-async';
 import Footer from '../components/Footer';
 
 export default function RefundPolicy() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-purple-50">
+      <Helmet>
+        <title>Refund Policy — Captions4You</title>
+        <meta name="description" content="Read the Captions4You refund policy. We offer a 7-day money-back guarantee on all premium subscriptions." />
+        <link rel="canonical" href="https://www.captions4you.com/refund-policy" />
+        <meta name="robots" content="noindex, follow" />
+      </Helmet>
       <nav className="bg-white/80 backdrop-blur-lg shadow-sm border-b border-gray-200 sticky top-0 z-50">
         <div className="container mx-auto px-4 sm:px-6 py-4 flex items-center gap-3">
           <Link to="/" className="flex items-center gap-2 text-gray-700 hover:text-indigo-600">

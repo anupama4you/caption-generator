@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useSelector, useDispatch } from 'react-redux';
+import { Helmet } from 'react-helmet-async';
 import { motion } from 'framer-motion';
 import {
   Check, Zap, Crown, Loader2, Clock, X
@@ -196,6 +197,14 @@ export default function Pricing() {
 
   return (
     <AppLayout>
+      <Helmet>
+        <title>Pricing — Free & Premium AI Caption Generator | Captions4You</title>
+        <meta name="description" content="Start free with 5 captions/month. Upgrade to Premium for AUD $4.99/month — 100 caption generations, all platforms, unlimited hashtags. No contracts, cancel anytime." />
+        <link rel="canonical" href="https://www.captions4you.com/pricing" />
+        <meta property="og:title" content="Pricing — Captions4You" />
+        <meta property="og:description" content="Free plan available. Premium from AUD $4.99/month. Generate AI captions for Instagram, TikTok, YouTube & more." />
+        <meta property="og:url" content="https://www.captions4you.com/pricing" />
+      </Helmet>
       <main className="container mx-auto px-4 sm:px-6 py-4 max-w-7xl">
         {/* Page Title */}
         <div className="text-center mb-6">

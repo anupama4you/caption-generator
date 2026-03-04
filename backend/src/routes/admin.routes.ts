@@ -12,6 +12,7 @@ router.use(adminMiddleware);
 router.get('/stats', (req, res) => adminController.getStats(req as any, res));
 router.get('/users', (req, res) => adminController.getUsers(req as any, res));
 router.patch('/users/:id/tier', (req, res) => adminController.updateUserTier(req as any, res));
+router.patch('/users/:id/admin', (req, res) => adminController.updateUserAdmin(req as any, res));
 router.delete('/users/:id', (req, res) => adminController.deleteUser(req as any, res));
 router.get('/captions', (req, res) => adminController.getCaptions(req as any, res));
 

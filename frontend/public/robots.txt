@@ -1,0 +1,10 @@
+User-agent: *
+Allow: /
+
+# Block private/admin pages
+Disallow: /admin
+Disallow: /profile
+Disallow: /history
+Disallow: /reset-password
+
+Sitemap: https://www.captions4you.com/sitemap.xml
