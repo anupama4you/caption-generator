@@ -13,6 +13,7 @@ import webhookRoutes from './routes/webhook.routes';
 import oauthRoutes from './routes/oauth.routes';
 import passwordResetRoutes from './routes/passwordReset.routes';
 import adminRoutes from './routes/admin.routes';
+import hashtagRoutes from './routes/hashtag.routes';
 
 const app = express();
 
@@ -54,6 +55,7 @@ app.use('/api/profile', profileRoutes);
 app.use('/api/subscription', subscriptionRoutes);
 app.use('/api/payment', paymentRoutes);
 app.use('/api/admin', adminRoutes);
+app.use('/api/hashtags', hashtagRoutes);
 
 // 404 handler
 app.use((_req, res) => {

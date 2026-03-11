@@ -14,6 +14,9 @@ import PrivacyPolicy from './pages/PrivacyPolicy';
 import TermsOfService from './pages/TermsOfService';
 import RefundPolicy from './pages/RefundPolicy';
 import Admin from './pages/Admin';
+import HashtagResearch from './pages/HashtagResearch';
+import ToolLandingPage from './pages/tools/ToolLandingPage';
+import toolsConfig from './pages/tools/toolsConfig';
 import { ErrorBoundary } from './components/common/ErrorBoundary';
 import ServerDownOverlay from './components/common/ServerDownOverlay';
 
@@ -75,6 +78,18 @@ function App() {
         <Route path="/terms-of-service" element={<TermsOfService />} />
         <Route path="/refund-policy" element={<RefundPolicy />} />
         <Route path="/admin" element={<Admin />} />
+        <Route
+          path="/hashtags"
+          element={isAuthenticated ? <HashtagResearch /> : <Navigate to="/" />}
+        />
+        {/* SEO tool landing pages — public, no auth required */}
+        {toolsConfig.map(tool => (
+          <Route
+            key={tool.slug}
+            path={`/${tool.slug}`}
+            element={<ToolLandingPage config={tool} />}
+          />
+        ))}
       </Routes>
     </ErrorBoundary>
   );
