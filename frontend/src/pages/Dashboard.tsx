@@ -1,6 +1,6 @@
 import { useState, useEffect, FormEvent, useRef } from 'react';
 import { Helmet } from 'react-helmet-async';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import { useSelector } from 'react-redux';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
@@ -308,13 +308,18 @@ function BenefitsCarousel() {
 
 export default function Dashboard() {
   const { user, isAuthenticated } = useSelector((state: RootState) => state.auth);
+  const [searchParams, setSearchParams] = useSearchParams();
 
-  const [selectedPlatforms, setSelectedPlatforms] = useState<Platform[]>([
-    'instagram',
-    'tiktok',
-  ]);
-  const [contentType, setContentType] = useState<ContentType>('short_video');
-const [description, setDescription] = useState('');
+  // Read platform/format/desc from URL params (set by tool landing pages)
+  const paramPlatforms = searchParams.get('platforms')?.split(',').filter(Boolean) as Platform[] | null;
+  const paramFormat = searchParams.get('format') as ContentType | null;
+  const paramDesc = searchParams.get('desc');
+
+  const [selectedPlatforms, setSelectedPlatforms] = useState<Platform[]>(
+    paramPlatforms?.length ? paramPlatforms : ['instagram', 'tiktok']
+  );
+  const [contentType, setContentType] = useState<ContentType>(paramFormat || 'short_video');
+  const [description, setDescription] = useState(paramDesc || '');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [generatedCaptions, setGeneratedCaptions] = useState<Caption[]>([]);
@@ -399,6 +404,17 @@ const [description, setDescription] = useState('');
       return filtered;
     });
   }, [contentType]);
+
+  // Auto-generate when arriving from a tool landing page
+  useEffect(() => {
+    if (paramDesc && paramPlatforms?.length) {
+      // Clear params from URL so refreshing doesn't re-trigger
+      setSearchParams({}, { replace: true });
+      // Small delay to let state settle before generating
+      const timer = setTimeout(() => doGenerate(), 300);
+      return () => clearTimeout(timer);
+    }
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const fetchUsage = async () => {
     try {
