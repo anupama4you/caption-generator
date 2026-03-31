@@ -21,6 +21,7 @@ export const config = {
   stripePriceIdYearly: process.env.STRIPE_PREMIUM_YEARLY_PRICE_ID || '',
   resendApiKey: process.env.RESEND_API_KEY || '',
   zernioApiKey: process.env.ZERNIO_API_KEY || '',
+  zernioProfileId: process.env.ZERNIO_PROFILE_ID || '',
 };
 
 // Validate required environment variables

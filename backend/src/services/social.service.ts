@@ -51,7 +51,10 @@ export class SocialService {
     const zernioPlatform = PLATFORM_MAP[platform] ?? platform;
 
     const res = await zernio.get(`/connect/${zernioPlatform}`, {
-      params: { profileId },
+      params: {
+        profileId,
+        redirectUrl: `${config.frontendUrl}/social/connected`,
+      },
     });
 
     return res.data.authUrl;

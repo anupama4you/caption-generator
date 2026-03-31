@@ -741,8 +741,7 @@ export default function Profile() {
 const PLATFORM_LABELS: Record<string, string> = {
   instagram: 'Instagram', tiktok: 'TikTok', facebook: 'Facebook',
   linkedin: 'LinkedIn', youtube: 'YouTube', twitter: 'X (Twitter)',
-  pinterest: 'Pinterest', snapchat: 'Snapchat', reddit: 'Reddit',
-  bluesky: 'Bluesky', threads: 'Threads',
+  pinterest: 'Pinterest', snapchat: 'Snapchat',
 };
 
 const PLATFORM_COLORS: Record<string, string> = {
@@ -750,8 +749,6 @@ const PLATFORM_COLORS: Record<string, string> = {
   facebook: 'from-blue-600 to-blue-500', linkedin: 'from-sky-700 to-sky-500',
   youtube: 'from-red-600 to-red-400', twitter: 'from-gray-900 to-gray-700',
   pinterest: 'from-red-600 to-rose-500', snapchat: 'from-yellow-400 to-amber-300',
-  reddit: 'from-orange-600 to-orange-400', bluesky: 'from-sky-500 to-blue-400',
-  threads: 'from-gray-900 to-gray-700',
 };
 
 const CONNECTABLE_PLATFORMS = [
