@@ -8,8 +8,9 @@ import {
   Hash, MessageSquare, BarChart3, Zap, Instagram,
   Facebook, Youtube, Video, Image, FileText, Camera,
   Loader2, Linkedin, Twitter, Ghost, Clapperboard, Layers, ChevronDown, ChevronUp,
-  ChevronLeft, ChevronRight, Crown, Share2, Star, RefreshCw,
+  ChevronLeft, ChevronRight, Crown, Share2, Star, RefreshCw, Send,
 } from 'lucide-react';
+import PostNowModal from '../components/PostNowModal';
 import facebookLogo from '../assets/images/facebook.png';
 import instagramLogo from '../assets/images/instagram.png';
 import tiktokLogo from '../assets/images/tiktok.png';
@@ -331,6 +332,7 @@ export default function Dashboard() {
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [showRegisterModal, setShowRegisterModal] = useState(false);
   const [isGuestGeneration, setIsGuestGeneration] = useState(false);
+  const [postNowCaption, setPostNowCaption] = useState<string | null>(null);
   const [captionCounter, setCaptionCounter] = useState(54_283);
   const counterRef = useRef(54_283);
   const formRef = useRef<HTMLDivElement>(null);
@@ -850,6 +852,11 @@ const togglePlatform = (platform: Platform) => {
                                           <motion.button whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} onClick={() => handleShare(caption)} className="px-3 py-2 rounded-lg border-2 border-indigo-200 text-indigo-600 hover:bg-indigo-50 transition-all" title="Share">
                                             <Share2 className="w-4 h-4" />
                                           </motion.button>
+                                          {user && (
+                                            <motion.button whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} onClick={() => setPostNowCaption(getCopyText(caption))} className="px-3 py-2 rounded-lg border-2 border-purple-200 text-purple-600 hover:bg-purple-50 transition-all" title="Post Now">
+                                              <Send className="w-4 h-4" />
+                                            </motion.button>
+                                          )}
                                         </div>
                                         {caption.analytics && (
                                           <div className="border-t border-gray-100 pt-4 mt-4">
@@ -2141,6 +2148,14 @@ const togglePlatform = (platform: Platform) => {
       />
 
       <Footer />
+
+      {/* Post Now Modal */}
+      <PostNowModal
+        open={postNowCaption !== null}
+        onClose={() => setPostNowCaption(null)}
+        captionText={postNowCaption ?? ''}
+        isPremium={user?.subscriptionTier === 'PREMIUM'}
+      />
     </div>
   );
 }

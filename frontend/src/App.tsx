@@ -15,6 +15,7 @@ import TermsOfService from './pages/TermsOfService';
 import RefundPolicy from './pages/RefundPolicy';
 import Admin from './pages/Admin';
 import HashtagResearch from './pages/HashtagResearch';
+import SocialConnected from './pages/SocialConnected';
 import ToolLandingPage from './pages/tools/ToolLandingPage';
 import toolsConfig from './pages/tools/toolsConfig';
 import { ErrorBoundary } from './components/common/ErrorBoundary';
@@ -78,6 +79,7 @@ function App() {
         <Route path="/terms-of-service" element={<TermsOfService />} />
         <Route path="/refund-policy" element={<RefundPolicy />} />
         <Route path="/admin" element={<Admin />} />
+        <Route path="/social/connected" element={isAuthenticated ? <SocialConnected /> : <Navigate to="/" />} />
         <Route
           path="/hashtags"
           element={isAuthenticated ? <HashtagResearch /> : <Navigate to="/" />}

@@ -1,8 +1,9 @@
 // Prisma Schema for Caption Generator
 
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
 }
 
 generator client {
@@ -59,13 +60,32 @@ model User {
   // Admin
   isAdmin Boolean @default(false)
 
+  // Zernio social publishing
+  zernioProfileId String?
+
   // Relations
   profile             UserProfile?
   captionAttempts     CaptionAttempt[]
   usageTracking       UsageTracking[]
   passwordResetTokens PasswordResetToken[]
+  socialConnections   SocialConnection[]
 
   @@index([email])
+}
+
+model SocialConnection {
+  id              String   @id @default(uuid())
+  userId          String
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  platform        String   // instagram, tiktok, facebook, linkedin, youtube, twitter, pinterest, snapchat
+  zernioAccountId String
+  displayName     String?  // e.g. @username
+  avatarUrl       String?
+  isActive        Boolean  @default(true)
+  connectedAt     DateTime @default(now())
+
+  @@unique([userId, platform])
+  @@index([userId])
 }
 
 model UserProfile {

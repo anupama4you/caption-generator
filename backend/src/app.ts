@@ -14,6 +14,7 @@ import oauthRoutes from './routes/oauth.routes';
 import passwordResetRoutes from './routes/passwordReset.routes';
 import adminRoutes from './routes/admin.routes';
 import hashtagRoutes from './routes/hashtag.routes';
+import socialRoutes from './routes/social.routes';
 
 const app = express();
 
@@ -56,6 +57,7 @@ app.use('/api/subscription', subscriptionRoutes);
 app.use('/api/payment', paymentRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/hashtags', hashtagRoutes);
+app.use('/api/social', socialRoutes);
 
 // 404 handler
 app.use((_req, res) => {

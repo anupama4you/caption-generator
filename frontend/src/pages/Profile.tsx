@@ -2,7 +2,7 @@ import { useState, useEffect, FormEvent } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useSelector, useDispatch } from 'react-redux';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Sparkles, Save, Settings, User as UserIcon, Zap, Hash, Crown, Loader2, X, AlertTriangle, Trash2 } from 'lucide-react';
+import { Sparkles, Save, Settings, User as UserIcon, Zap, Hash, Crown, Loader2, X, AlertTriangle, Trash2, Share2, CheckCircle, ExternalLink, Unlink } from 'lucide-react';
 import { RootState } from '../store/store';
 import { logout } from '../store/authSlice';
 import api from '../services/api';
@@ -614,6 +614,9 @@ export default function Profile() {
               </div>
             </motion.div>
 
+            {/* Connected Social Accounts */}
+            <ConnectedAccounts isPremium={user?.subscriptionTier === 'PREMIUM'} />
+
             {/* Danger Zone */}
             <motion.div
               initial={{ opacity: 0, y: 20 }}
@@ -730,5 +733,130 @@ export default function Profile() {
       </AnimatePresence>
 
     </AppLayout>
+  );
+}
+
+// ─── Connected Accounts sub-component ────────────────────────────────────────
+
+const PLATFORM_LABELS: Record<string, string> = {
+  instagram: 'Instagram', tiktok: 'TikTok', facebook: 'Facebook',
+  linkedin: 'LinkedIn', youtube: 'YouTube', twitter: 'X (Twitter)',
+  pinterest: 'Pinterest', snapchat: 'Snapchat', reddit: 'Reddit',
+  bluesky: 'Bluesky', threads: 'Threads',
+};
+
+const PLATFORM_COLORS: Record<string, string> = {
+  instagram: 'from-purple-500 to-pink-500', tiktok: 'from-gray-900 to-gray-700',
+  facebook: 'from-blue-600 to-blue-500', linkedin: 'from-sky-700 to-sky-500',
+  youtube: 'from-red-600 to-red-400', twitter: 'from-gray-900 to-gray-700',
+  pinterest: 'from-red-600 to-rose-500', snapchat: 'from-yellow-400 to-amber-300',
+  reddit: 'from-orange-600 to-orange-400', bluesky: 'from-sky-500 to-blue-400',
+  threads: 'from-gray-900 to-gray-700',
+};
+
+const CONNECTABLE_PLATFORMS = [
+  'instagram', 'tiktok', 'facebook', 'linkedin', 'youtube',
+  'twitter', 'pinterest', 'snapchat',
+];
+
+function ConnectedAccounts({ isPremium }: { isPremium: boolean }) {
+  const [connections, setConnections] = useState<any[]>([]);
+  const [connecting, setConnecting] = useState<string | null>(null);
+  const [disconnecting, setDisconnecting] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!isPremium) return;
+    api.get('/social/accounts')
+      .then(r => setConnections(r.data.data.connections ?? []))
+      .catch(() => {});
+  }, [isPremium]);
+
+  const connect = async (platform: string) => {
+    setConnecting(platform);
+    try {
+      const res = await api.get(`/social/connect/${platform}`);
+      window.location.href = res.data.data.authUrl;
+    } catch {
+      setConnecting(null);
+    }
+  };
+
+  const disconnect = async (platform: string) => {
+    setDisconnecting(platform);
+    try {
+      await api.delete(`/social/accounts/${platform}`);
+      setConnections(prev => prev.filter(c => c.platform !== platform));
+    } finally {
+      setDisconnecting(null);
+    }
+  };
+
+  const connectedPlatforms = new Set(connections.map(c => c.platform));
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ delay: 0.35 }}
+      className="bg-white rounded-xl shadow-lg p-5 border border-gray-100"
+    >
+      <h3 className="text-lg font-bold text-gray-900 mb-1 flex items-center gap-2">
+        <Share2 className="w-5 h-5 text-indigo-600" />
+        Connected Social Accounts
+        {isPremium && <span className="text-xs font-semibold bg-indigo-100 text-indigo-700 px-2 py-0.5 rounded-full ml-1">Premium</span>}
+      </h3>
+      <p className="text-sm text-gray-500 mb-4">
+        Connect your social accounts to post captions directly from the caption generator.
+      </p>
+
+      {!isPremium ? (
+        <div className="bg-indigo-50 border border-indigo-100 rounded-xl p-4 text-center">
+          <Crown className="w-7 h-7 text-indigo-500 mx-auto mb-2" />
+          <p className="text-sm font-semibold text-gray-800 mb-1">Premium feature</p>
+          <p className="text-xs text-gray-500 mb-3">Upgrade to connect accounts and post with one click.</p>
+          <a href="/pricing" className="inline-flex items-center gap-1.5 text-xs font-semibold text-indigo-600 hover:underline">
+            View plans <ExternalLink className="w-3 h-3" />
+          </a>
+        </div>
+      ) : (
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+          {CONNECTABLE_PLATFORMS.map(platform => {
+            const isConnected = connectedPlatforms.has(platform);
+            const conn = connections.find(c => c.platform === platform);
+            const gradient = PLATFORM_COLORS[platform] ?? 'from-gray-500 to-gray-400';
+            const isWorking = connecting === platform || disconnecting === platform;
+
+            return (
+              <div key={platform} className={`rounded-xl border-2 p-3 ${isConnected ? 'border-green-200 bg-green-50' : 'border-gray-200'}`}>
+                <div className="flex items-center gap-2 mb-2">
+                  <div className={`w-6 h-6 rounded-lg bg-gradient-to-br ${gradient} flex-shrink-0`} />
+                  <span className="text-xs font-semibold text-gray-800 truncate">{PLATFORM_LABELS[platform]}</span>
+                  {isConnected && <CheckCircle className="w-3.5 h-3.5 text-green-500 ml-auto flex-shrink-0" />}
+                </div>
+                {conn?.displayName && (
+                  <p className="text-xs text-gray-400 truncate mb-2">{conn.displayName}</p>
+                )}
+                <button
+                  onClick={() => isConnected ? disconnect(platform) : connect(platform)}
+                  disabled={isWorking}
+                  className={`w-full text-xs font-semibold py-1.5 rounded-lg transition-colors flex items-center justify-center gap-1 ${
+                    isConnected
+                      ? 'bg-red-50 text-red-500 hover:bg-red-100'
+                      : 'bg-indigo-600 text-white hover:bg-indigo-700'
+                  } disabled:opacity-50`}
+                >
+                  {isWorking
+                    ? <Loader2 className="w-3 h-3 animate-spin" />
+                    : isConnected
+                      ? <><Unlink className="w-3 h-3" />Disconnect</>
+                      : 'Connect'
+                  }
+                </button>
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </motion.div>
   );
 }
